@@ -7,6 +7,8 @@ import dev.opentrack.app.domain.model.ChartStyle
 import dev.opentrack.app.domain.model.CalendarSpan
 import dev.opentrack.app.domain.model.CalendarRange
 import dev.opentrack.app.domain.model.CalendarWeekStart
+import dev.opentrack.app.domain.model.ChoiceOption
+import dev.opentrack.app.domain.model.EnumPayloadKind
 import dev.opentrack.app.domain.model.Dashboard
 import dev.opentrack.app.domain.model.DashboardSeries
 import dev.opentrack.app.domain.model.DashboardWidget
@@ -491,11 +493,24 @@ internal object UiModelMapper {
                 ),
             )
         }
-        TrackerKind.ENUM, TrackerKind.RADIO, TrackerKind.BOOLEAN -> {
+        TrackerKind.ENUM -> {
             val parts = distribution(tracker, entries)
-            if (parts.isEmpty()) emptyList() else listOf(
-                DetailChartUi.Distribution("Distribution", "${entries.size} entries", parts),
-            )
+            buildList {
+                if (parts.isNotEmpty()) add(DetailChartUi.Distribution("Distribution", "${entries.size} entries", parts))
+                tracker.fields.firstOrNull { it.archivedAt == null }?.let { addAll(enumPayloadCharts(it, entries)) }
+            }
+        }
+        TrackerKind.RADIO -> {
+            val field = tracker.fields.firstOrNull { it.archivedAt == null }
+            val parts = distribution(tracker, entries)
+            buildList {
+                if (parts.isNotEmpty()) add(DetailChartUi.Distribution("Distribution", "${entries.size} entries", parts))
+                field?.let { radioScoreChart(it, entries) }?.let(::add)
+            }
+        }
+        TrackerKind.BOOLEAN -> {
+            val parts = distribution(tracker, entries)
+            if (parts.isEmpty()) emptyList() else listOf(DetailChartUi.Distribution("Distribution", "${entries.size} entries", parts))
         }
         TrackerKind.TIMESTAMP -> if (entries.isEmpty()) emptyList() else listOf(
             DetailChartUi.Calendar(
@@ -545,7 +560,7 @@ internal object UiModelMapper {
                             )
                         }
                     }
-                    FieldKind.ENUM, FieldKind.RADIO, FieldKind.BOOLEAN -> {
+                    FieldKind.ENUM -> {
                         val parts = distribution(field, entries)
                         val count = parts.sumOf { it.value.toDouble() }.toInt()
                         if (count > 0) {
@@ -556,6 +571,22 @@ internal object UiModelMapper {
                                     parts = parts,
                                 ),
                             )
+                        }
+                        addAll(enumPayloadCharts(field, entries))
+                    }
+                    FieldKind.RADIO -> {
+                        val parts = distribution(field, entries)
+                        val count = parts.sumOf { it.value.toDouble() }.toInt()
+                        if (count > 0) {
+                            add(DetailChartUi.Distribution(field.label, "$count ${if (count == 1) "entry" else "entries"}", parts))
+                        }
+                        radioScoreChart(field, entries)?.let(::add)
+                    }
+                    FieldKind.BOOLEAN -> {
+                        val parts = distribution(field, entries)
+                        val count = parts.sumOf { it.value.toDouble() }.toInt()
+                        if (count > 0) {
+                            add(DetailChartUi.Distribution(field.label, "$count ${if (count == 1) "entry" else "entries"}", parts))
                         }
                     }
                     FieldKind.TIMESTAMP -> {
@@ -592,6 +623,78 @@ internal object UiModelMapper {
                 y = value.toFloat(),
                 label = entry.recordedAt.localDate.toString(),
                 valueLabel = formatNumber(value),
+            )
+        }
+    }
+
+    private fun enumPayloadCharts(
+        field: TrackerField,
+        entries: List<TrackerEntry>,
+    ): List<DetailChartUi.Line> = field.options
+        .filter { option ->
+            option.archivedAt == null && option.payloadKind in setOf(
+                EnumPayloadKind.DECIMAL,
+                EnumPayloadKind.INTEGER,
+                EnumPayloadKind.DURATION,
+            )
+        }
+        .mapNotNull { option ->
+            val points = choicePayloadPoints(field, option, entries)
+            if (points.isEmpty()) null else DetailChartUi.Line(
+                title = listOf(option.label, option.payloadLabel).filterNotNull().joinToString(" · "),
+                summary = buildString {
+                    append(points.size).append(if (points.size == 1) " value" else " values")
+                    option.payloadUnit?.takeIf { it.isNotBlank() }?.let { append(" in ").append(it) }
+                },
+                points = points,
+                startLabel = points.first().label,
+                endLabel = points.last().label,
+            )
+        }
+
+    private fun choicePayloadPoints(
+        field: TrackerField,
+        option: ChoiceOption,
+        entries: List<TrackerEntry>,
+    ): List<ChartPointUi> {
+        var pointIndex = 0
+        return entries.mapNotNull { entry ->
+            val choice = entry.values[field.id] as? FieldValue.Choice ?: return@mapNotNull null
+            if (choice.optionId != option.id) return@mapNotNull null
+            val value = when (val payload = choice.payload) {
+                is FieldValue.Decimal -> payload.value
+                is FieldValue.Integer -> payload.value.toDouble()
+                is FieldValue.DurationValue -> payload.value.toDisplayAmount(option.payloadUnit)
+                else -> null
+            } ?: return@mapNotNull null
+            ChartPointUi(
+                x = pointIndex++.toFloat(),
+                y = value.toFloat(),
+                label = entry.recordedAt.localDate.toString(),
+                valueLabel = formatNumber(value, field.decimalPlaces),
+            )
+        }
+    }
+
+    private fun radioScoreChart(field: TrackerField, entries: List<TrackerEntry>): DetailChartUi.Line? {
+        var pointIndex = 0
+        val points = entries.mapNotNull { entry ->
+            val choice = entry.values[field.id] as? FieldValue.Choice ?: return@mapNotNull null
+            val score = field.options.firstOrNull { it.id == choice.optionId }?.radioScore ?: return@mapNotNull null
+            ChartPointUi(
+                x = pointIndex++.toFloat(),
+                y = score.toFloat(),
+                label = entry.recordedAt.localDate.toString(),
+                valueLabel = formatNumber(score),
+            )
+        }
+        return points.takeIf { it.isNotEmpty() }?.let {
+            DetailChartUi.Line(
+                title = "${field.label} trend",
+                summary = "${it.size} ${if (it.size == 1) "rating" else "ratings"}",
+                points = it,
+                startLabel = it.first().label,
+                endLabel = it.last().label,
             )
         }
     }

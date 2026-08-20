@@ -14,6 +14,7 @@ import dev.opentrack.app.domain.model.DashboardWidget
 import dev.opentrack.app.domain.model.DashboardWidgetKind
 import dev.opentrack.app.domain.model.FieldKind
 import dev.opentrack.app.domain.model.FieldValue
+import dev.opentrack.app.domain.model.EnumPayloadKind
 import dev.opentrack.app.domain.model.RecordedAt
 import dev.opentrack.app.domain.model.TrackerDefinition
 import dev.opentrack.app.domain.model.TrackerEntry
@@ -72,7 +73,7 @@ class UiModelMapperTest {
         )
 
         assertThat(detail.charts.map { it.title })
-            .containsExactly("Activity", "Weight", "Energy", "Exercised")
+            .containsExactly("Activity", "Weight", "Energy", "Energy trend", "Exercised")
             .inOrder()
     }
 
@@ -204,5 +205,45 @@ class UiModelMapperTest {
         assertThat(today.dayNumber).isEqualTo("19")
         assertThat(today.count).isEqualTo(2)
         assertThat(today.contentDescription).contains("2 entries")
+    }
+
+    @Test
+    fun `group exercise payloads expose kg progress across time`() {
+        val bench = ChoiceOption(
+            id = "bench",
+            label = "Bench press",
+            payloadKind = EnumPayloadKind.DECIMAL,
+            payloadLabel = "Weight",
+            payloadUnit = "kg",
+        )
+        val exercise = TrackerField(
+            id = "exercise",
+            label = "Exercise",
+            kind = FieldKind.ENUM,
+            options = listOf(bench),
+        )
+        val tracker = TrackerDefinition(
+            id = "gym",
+            name = "Gym progress",
+            kind = TrackerKind.GROUP,
+            fields = listOf(exercise),
+        )
+        val entries = listOf(60.0, 67.5).mapIndexed { index, weight ->
+            TrackerEntry(
+                id = "set-$index",
+                trackerId = tracker.id,
+                recordedAt = RecordedAt.Day(LocalDate.of(2026, 8, 18 + index)),
+                values = mapOf(exercise.id to FieldValue.Choice(bench.id, FieldValue.Decimal(weight))),
+            )
+        }
+
+        val detail = UiModelMapper.detail(
+            tracker, entries, DetailTabUi.OVERVIEW, DateRangeUi.ALL, clock,
+        )
+        val progress = detail.charts.filterIsInstance<DetailChartUi.Line>()
+            .single { it.title == "Bench press · Weight" }
+
+        assertThat(progress.summary).isEqualTo("2 values in kg")
+        assertThat(progress.points.map { it.y }).containsExactly(60f, 67.5f).inOrder()
     }
 }
