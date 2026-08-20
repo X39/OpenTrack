@@ -57,6 +57,10 @@ android {
         unitTests.isIncludeAndroidResources = true
     }
 
+    sourceSets {
+        getByName("androidTest").assets.directories.add("schemas")
+    }
+
     signingConfigs {
         if (releaseSigningConfigured) {
             create("release") {

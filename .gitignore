@@ -1,12 +1,47 @@
+# Gradle and Kotlin
 .gradle/
 .kotlin/
-.idea/
-build/
 **/build/
+out/
+*.class
+
+# Local Android configuration
 local.properties
-*.iml
+
+# Android build outputs
+*.apk
+*.ap_
+*.aab
+*.dex
 captures/
 .externalNativeBuild/
 .cxx/
-.signing/
 artifacts/
+
+# IDE metadata
+.idea/
+.fleet/
+.vscode/
+*.iml
+
+# Signing keys and local secrets
+.signing/
+keystore.properties
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*

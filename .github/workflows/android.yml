@@ -1,0 +1,421 @@
+name: Android CI
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.ref_type == 'tag' && format('android-release-{0}', github.ref) || format('android-ci-{0}', github.run_id) }}
+  cancel-in-progress: false
+
+env:
+  JAVA_VERSION: "17"
+  ANDROID_COMPILE_SDK: "36"
+  ANDROID_BUILD_TOOLS: "36.0.0"
+  APPLICATION_ID: dev.opentrack.app
+
+jobs:
+  verify:
+    name: JVM tests, lint, and debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: sdkmanager "platforms;android-${ANDROID_COMPILE_SDK}" "build-tools;${ANDROID_BUILD_TOOLS}"
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Test, lint, and build debug APK
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:lintDebug :app:assembleDebug --stacktrace
+
+      - name: Upload JVM test and lint reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: verification-reports-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            app/build/reports/tests/testDebugUnitTest/
+            app/build/reports/lint-results-debug.html
+            app/build/reports/lint-results-debug.xml
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: OpenTrack-debug-${{ github.sha }}-${{ github.run_attempt }}
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  instrumented_tests:
+    name: Instrumented tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: sdkmanager "platforms;android-${ANDROID_COMPILE_SDK}" "build-tools;${ANDROID_BUILD_TOOLS}"
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Enable KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Run instrumented tests
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest --stacktrace
+
+      - name: Upload instrumented test reports
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: instrumented-test-reports-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            app/build/reports/androidTests/connected/debug/
+            app/build/outputs/androidTest-results/connected/
+          if-no-files-found: warn
+          retention-days: 14
+
+  release_build:
+    name: Build signed release APK
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - verify
+      - instrumented_tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: release
+    outputs:
+      artifact_id: ${{ steps.upload_release.outputs.artifact-id }}
+      version: ${{ steps.version.outputs.version }}
+      version_code: ${{ steps.version.outputs.version_code }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@9c971963bec38e04b3d30dcc455b5382be2fdbfb # v6.3.0
+        with:
+          cache-provider: basic
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: sdkmanager "platforms;android-${ANDROID_COMPILE_SDK}" "build-tools;${ANDROID_BUILD_TOOLS}"
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Validate release version
+        id: version
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$RELEASE_TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "Release tags must use vMAJOR.MINOR.PATCH (for example, v1.2.3)." >&2
+            exit 1
+          fi
+
+          tag_version="${BASH_REMATCH[1]}"
+          version_name="$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"([^"]+)".*/\1/p' app/build.gradle.kts)"
+          version_code="$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts)"
+
+          if [[ -z "$version_name" ]]; then
+            echo "Could not read versionName from app/build.gradle.kts." >&2
+            exit 1
+          fi
+
+          if [[ ! "$version_code" =~ ^[1-9][0-9]*$ ]]; then
+            echo "versionCode must be a positive integer in app/build.gradle.kts." >&2
+            exit 1
+          fi
+
+          if [[ "$tag_version" != "$version_name" ]]; then
+            echo "Tag version $tag_version does not match app versionName $version_name." >&2
+            exit 1
+          fi
+
+          default_ref="refs/remotes/origin/$DEFAULT_BRANCH"
+          if ! git show-ref --verify --quiet "$default_ref"; then
+            echo "The default branch ref $default_ref is unavailable." >&2
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" "$default_ref"; then
+            echo "Release tag $RELEASE_TAG must point to a commit on $DEFAULT_BRANCH." >&2
+            exit 1
+          fi
+
+          previous_tag=""
+          if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            while IFS= read -r candidate; do
+              if [[ "$candidate" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                previous_tag="$candidate"
+                break
+              fi
+            done < <(git tag --merged HEAD^ --list 'v*' --sort=-version:refname)
+          fi
+
+          if [[ -n "$previous_tag" ]]; then
+            previous_version_code="$(git show "$previous_tag:app/build.gradle.kts" | sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p')"
+            if [[ ! "$previous_version_code" =~ ^[1-9][0-9]*$ ]]; then
+              echo "Could not read a valid versionCode from $previous_tag." >&2
+              exit 1
+            fi
+
+            if (( 10#$version_code <= 10#$previous_version_code )); then
+              echo "versionCode $version_code must be greater than $previous_version_code from $previous_tag." >&2
+              exit 1
+            fi
+          fi
+
+          echo "version=$version_name" >> "$GITHUB_OUTPUT"
+          echo "version_code=$version_code" >> "$GITHUB_OUTPUT"
+
+      - name: Decode release signing key
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.OPENTRACK_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.OPENTRACK_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.OPENTRACK_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.OPENTRACK_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          for secret_name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+            if [[ -z "${!secret_name:-}" ]]; then
+              echo "Required release-signing secret $secret_name is missing." >&2
+              exit 1
+            fi
+          done
+
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/opentrack-release-keystore"
+          test -s "$RUNNER_TEMP/opentrack-release-keystore"
+          chmod 600 "$RUNNER_TEMP/opentrack-release-keystore"
+
+      - name: Build signed release APK
+        env:
+          OPENTRACK_KEYSTORE_FILE: ${{ runner.temp }}/opentrack-release-keystore
+          OPENTRACK_KEYSTORE_PASSWORD: ${{ secrets.OPENTRACK_KEYSTORE_PASSWORD }}
+          OPENTRACK_KEY_ALIAS: ${{ secrets.OPENTRACK_KEY_ALIAS }}
+          OPENTRACK_KEY_PASSWORD: ${{ secrets.OPENTRACK_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon clean :app:assembleRelease --stacktrace
+
+      - name: Remove release signing key
+        if: always()
+        shell: bash
+        run: rm -f "$RUNNER_TEMP/opentrack-release-keystore"
+
+      - name: Verify and package release APK
+        shell: bash
+        env:
+          EXPECTED_SIGNING_CERT_SHA256: ${{ vars.OPENTRACK_SIGNING_CERT_SHA256 }}
+          VERSION: ${{ steps.version.outputs.version }}
+          VERSION_CODE: ${{ steps.version.outputs.version_code }}
+        run: |
+          set -euo pipefail
+
+          source_apk="app/build/outputs/apk/release/app-release.apk"
+          test -f "$source_apk"
+
+          build_tools="$ANDROID_HOME/build-tools/$ANDROID_BUILD_TOOLS"
+          "$build_tools/zipalign" -c -P 16 4 "$source_apk"
+
+          verification_output="$("$build_tools/apksigner" verify --verbose --print-certs --Werr "$source_apk")"
+          printf '%s\n' "$verification_output"
+
+          signer_count="$(printf '%s\n' "$verification_output" | sed -nE 's/^Number of signers: ([0-9]+)$/\1/p')"
+          actual_fingerprint="$(printf '%s\n' "$verification_output" | sed -nE 's/^Signer #1 certificate SHA-256 digest: (.+)$/\1/p')"
+          actual_fingerprint="$(printf '%s' "$actual_fingerprint" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+          expected_fingerprint="$(printf '%s' "$EXPECTED_SIGNING_CERT_SHA256" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]:')"
+
+          if [[ "$signer_count" != "1" ]]; then
+            echo "Expected exactly one APK signer, found ${signer_count:-none}." >&2
+            exit 1
+          fi
+
+          if [[ ! "$expected_fingerprint" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "Release environment variable OPENTRACK_SIGNING_CERT_SHA256 must contain a SHA-256 certificate fingerprint." >&2
+            exit 1
+          fi
+
+          if [[ "$actual_fingerprint" != "$expected_fingerprint" ]]; then
+            echo "APK signer certificate does not match OPENTRACK_SIGNING_CERT_SHA256." >&2
+            exit 1
+          fi
+
+          package_info="$("$build_tools/aapt" dump badging "$source_apk" | sed -n '/^package: /{p;q;}')"
+          actual_version_code="$(printf '%s\n' "$package_info" | sed -nE "s/.*versionCode='([^']+)'.*/\1/p")"
+          if [[ "$package_info" != *"name='$APPLICATION_ID'"* ]]; then
+            echo "Release APK application ID does not match $APPLICATION_ID." >&2
+            exit 1
+          fi
+
+          if [[ "$package_info" != *"versionName='$VERSION'"* || "$actual_version_code" != "$VERSION_CODE" ]]; then
+            echo "Release APK version metadata does not match Gradle configuration." >&2
+            exit 1
+          fi
+
+          release_dir="$RUNNER_TEMP/opentrack-release"
+          asset_name="OpenTrack-${VERSION}-release.apk"
+          mkdir -p "$release_dir"
+          cp "$source_apk" "$release_dir/$asset_name"
+          (
+            cd "$release_dir"
+            sha256sum "$asset_name" > "$asset_name.sha256"
+          )
+
+      - name: Upload release artifact
+        id: upload_release
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: OpenTrack-${{ steps.version.outputs.version }}-release-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/opentrack-release/
+          if-no-files-found: error
+          retention-days: 30
+
+  publish_release:
+    name: Publish GitHub Release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - release_build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+
+    steps:
+      - name: Download verified release artifact
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          artifact-ids: ${{ needs.release_build.outputs.artifact_id }}
+          path: release-assets
+
+      - name: Publish GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          VERSION: ${{ needs.release_build.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$RELEASE_TAG" != "v$VERSION" ]]; then
+            echo "Release tag and verified artifact version differ." >&2
+            exit 1
+          fi
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; refusing to replace published assets." >&2
+            exit 1
+          fi
+
+          read -r tag_type tag_sha < <(
+            gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$RELEASE_TAG" \
+              --jq '[.object.type, .object.sha] | @tsv'
+          )
+
+          for _ in 1 2 3 4 5; do
+            if [[ "$tag_type" == "commit" ]]; then
+              break
+            fi
+            if [[ "$tag_type" != "tag" ]]; then
+              echo "Unexpected Git tag object type: $tag_type." >&2
+              exit 1
+            fi
+
+            read -r tag_type tag_sha < <(
+              gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_sha" \
+                --jq '[.object.type, .object.sha] | @tsv'
+            )
+          done
+
+          if [[ "$tag_type" != "commit" || "$tag_sha" != "$GITHUB_SHA" ]]; then
+            echo "Remote tag $RELEASE_TAG no longer points to the tested commit $GITHUB_SHA." >&2
+            exit 1
+          fi
+
+          apk="release-assets/OpenTrack-${VERSION}-release.apk"
+          checksum="$apk.sha256"
+          test -f "$apk"
+          test -f "$checksum"
+          (
+            cd release-assets
+            sha256sum --check "OpenTrack-${VERSION}-release.apk.sha256"
+          )
+
+          gh release create "$RELEASE_TAG" "$apk" "$checksum" \
+            --verify-tag \
+            --title "OpenTrack $VERSION" \
+            --generate-notes

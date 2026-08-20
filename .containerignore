@@ -10,3 +10,12 @@ local.properties
 captures/
 .externalNativeBuild/
 .cxx/
+keystore.properties
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.pem
+*.key
+.env
+.env.*
