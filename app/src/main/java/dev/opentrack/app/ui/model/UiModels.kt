@@ -162,6 +162,15 @@ data class OnboardingUiState(
 )
 
 @Immutable
+data class BuilderTemplateUi(
+    val id: String,
+    val title: String,
+    val description: String,
+    val glyph: TrackerGlyphUi,
+    val accent: Color,
+)
+
+@Immutable
 enum class DetailTabUi(val label: String) { OVERVIEW("Overview"), ENTRIES("Entries") }
 
 @Immutable
@@ -292,6 +301,8 @@ enum class QuickLogModeUi(val label: String) {
 data class TrackerBuilderUiState(
     val step: Int = 0,
     val editingTrackerId: String? = null,
+    val selectedTemplateId: String? = null,
+    val templates: List<BuilderTemplateUi> = emptyList(),
     val name: String = "",
     val kind: TrackerKindUi? = null,
     val glyph: TrackerGlyphUi = TrackerGlyphUi.PULSE,
@@ -314,6 +325,7 @@ sealed interface TrackerBuilderAction {
     data object Back : TrackerBuilderAction
     data object Next : TrackerBuilderAction
     data object Save : TrackerBuilderAction
+    data class TemplateSelected(val id: String) : TrackerBuilderAction
     data class NameChanged(val value: String) : TrackerBuilderAction
     data class KindSelected(val kind: TrackerKindUi) : TrackerBuilderAction
     data class PrecisionSelected(val precision: TimestampPrecisionUi) : TrackerBuilderAction

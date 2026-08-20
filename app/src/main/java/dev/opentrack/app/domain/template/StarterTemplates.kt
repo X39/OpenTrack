@@ -65,7 +65,7 @@ object StarterTemplates {
                 createdAt = now,
                 updatedAt = now,
             )
-            WORKOUT_SET -> workout(name ?: "Workout set", now)
+            WORKOUT_SET -> workout(name ?: "Workout set", unit ?: "kg", now)
             WATER -> TrackerDefinition(
                 name = name ?: "Water",
                 kind = TrackerKind.COUNTER,
@@ -87,13 +87,13 @@ object StarterTemplates {
         }
     }
 
-    private fun workout(name: String, now: java.time.Instant): TrackerDefinition {
+    private fun workout(name: String, weightUnit: String, now: java.time.Instant): TrackerDefinition {
         val field = TrackerField(
             label = "Exercise",
             kind = FieldKind.ENUM,
             options = listOf(
-                ChoiceOption(label = "Bench press", order = 0, payloadKind = EnumPayloadKind.DECIMAL, payloadLabel = "Weight", payloadUnit = "kg"),
-                ChoiceOption(label = "Butterfly", order = 1, payloadKind = EnumPayloadKind.DECIMAL, payloadLabel = "Weight", payloadUnit = "kg"),
+                ChoiceOption(label = "Bench press", order = 0, payloadKind = EnumPayloadKind.DECIMAL, payloadLabel = "Weight", payloadUnit = weightUnit),
+                ChoiceOption(label = "Butterfly", order = 1, payloadKind = EnumPayloadKind.DECIMAL, payloadLabel = "Weight", payloadUnit = weightUnit),
                 ChoiceOption(label = "Push-ups", order = 2, payloadKind = EnumPayloadKind.INTEGER, payloadLabel = "Repetitions", payloadUnit = "reps"),
             ),
         )

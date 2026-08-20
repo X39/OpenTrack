@@ -12,9 +12,14 @@ import dev.opentrack.app.ui.model.QuickLogModeUi
 import dev.opentrack.app.ui.model.TrackerBuilderAction
 import dev.opentrack.app.ui.model.TrackerKindUi
 import java.time.Duration
+import java.time.Clock
+import java.time.Instant
+import java.time.ZoneOffset
 import org.junit.Test
 
 class TrackerBuilderLogicTest {
+    private val clock = Clock.fixed(Instant.parse("2026-08-20T00:00:00Z"), ZoneOffset.UTC)
+
     @Test
     fun `counter builder preserves a negative quick delta`() {
         var state = TrackerBuilderLogic.initial()
@@ -94,5 +99,32 @@ class TrackerBuilderLogicTest {
 
         assertThat(rebuilt.fields.single().unit).isEqualTo("kg")
         assertThat(rebuilt.fields.single().decimalPlaces).isEqualTo(1)
+    }
+
+    @Test
+    fun `every common template opens as a new editable tracker`() {
+        StarterTemplates.available.forEach { template ->
+            val state = TrackerBuilderLogic.fromTemplate(template.key, clock = clock)
+
+            assertThat(state.editingTrackerId).isNull()
+            assertThat(state.selectedTemplateId).isEqualTo(template.key)
+            assertThat(state.canContinue).isTrue()
+            assertThat(state.fields.all { !it.structureLocked && !it.requiredLocked }).isTrue()
+            assertThat(state.options.all { !it.payloadKindLocked }).isTrue()
+            TrackerBuilderLogic.build(state)
+        }
+    }
+
+    @Test
+    fun `workout template follows the selected unit system`() {
+        val metric = TrackerBuilderLogic.build(
+            TrackerBuilderLogic.fromTemplate(StarterTemplates.WORKOUT_SET, metric = true, clock = clock),
+        )
+        val imperial = TrackerBuilderLogic.build(
+            TrackerBuilderLogic.fromTemplate(StarterTemplates.WORKOUT_SET, metric = false, clock = clock),
+        )
+
+        assertThat(metric.fields.single().options.first().payloadUnit).isEqualTo("kg")
+        assertThat(imperial.fields.single().options.first().payloadUnit).isEqualTo("lb")
     }
 }

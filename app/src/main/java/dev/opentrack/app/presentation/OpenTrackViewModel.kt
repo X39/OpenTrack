@@ -636,7 +636,9 @@ class OpenTrackViewModel(
 
     private suspend fun createSelectedTemplates(onboarding: OnboardingUiState) {
         val selected = onboarding.templates.filter { it.selected }.mapNotNull { template ->
-            starterDefinition(template.id, onboarding.usesMetricUnits)
+            runCatching {
+                starterTemplateDefinition(template.id, onboarding.usesMetricUnits, clock)
+            }.getOrNull()
         }
         val existingNames = repository.snapshot().trackers.mapTo(hashSetOf()) { it.name.lowercase() }
         selected.filterNot { it.name.lowercase() in existingNames }.forEach { tracker ->
@@ -661,85 +663,5 @@ class OpenTrackViewModel(
             require(modelClass.isAssignableFrom(OpenTrackViewModel::class.java))
             return OpenTrackViewModel(repository, preferences, trackingActions) as T
         }
-    }
-}
-
-private fun starterTemplateUi() = listOf(
-    OnboardingTemplateUi("water", "Water", "Count glasses through the day", TrackerGlyphUi.WATER, SignalPalette.Sky, true),
-    OnboardingTemplateUi("weight", "Weight", "Track a measured value over time", TrackerGlyphUi.SCALE, SignalPalette.Moss, true),
-    OnboardingTemplateUi("mood", "Energy", "Rate your energy from low to high", TrackerGlyphUi.MOOD, SignalPalette.Sun),
-    OnboardingTemplateUi("gym", "Workout", "Record which exercise you completed", TrackerGlyphUi.FITNESS, SignalPalette.Coral),
-)
-
-private fun starterDefinition(id: String, metric: Boolean): TrackerDefinition? {
-    val trackerId = newId()
-    return when (id) {
-        "water" -> TrackerDefinition(
-            id = trackerId,
-            name = "Water",
-            kind = TrackerKind.COUNTER,
-            iconKey = TrackerGlyphUi.WATER.name,
-            colorArgb = SignalPalette.Sky.value.toLong(),
-            fields = listOf(TrackerField(label = "Glasses", kind = FieldKind.COUNTER, unit = "glasses")),
-        )
-        "weight" -> TrackerDefinition(
-            id = trackerId,
-            name = "Weight",
-            kind = TrackerKind.VALUE,
-            iconKey = TrackerGlyphUi.SCALE.name,
-            colorArgb = SignalPalette.Moss.value.toLong(),
-            fields = listOf(TrackerField(label = "Weight", kind = FieldKind.VALUE, unit = if (metric) "kg" else "lb")),
-            quickAdd = QuickAddConfig(QuickAddMode.OPEN_EDITOR),
-        )
-        "mood" -> {
-            val options = listOf("Low", "Normal", "High").mapIndexed { index, label ->
-                ChoiceOption(label = label, order = index, radioScore = (index + 1).toDouble())
-            }
-            TrackerDefinition(
-                id = trackerId,
-                name = "Energy",
-                kind = TrackerKind.RADIO,
-                iconKey = TrackerGlyphUi.MOOD.name,
-                colorArgb = SignalPalette.Sun.value.toLong(),
-                fields = listOf(TrackerField(label = "Energy", kind = FieldKind.RADIO, options = options)),
-                quickAdd = QuickAddConfig(QuickAddMode.OPEN_EDITOR),
-            )
-        }
-        "gym" -> {
-            val weightUnit = if (metric) "kg" else "lb"
-            val options = listOf(
-                ChoiceOption(
-                    label = "Bench press",
-                    order = 0,
-                    payloadKind = EnumPayloadKind.DECIMAL,
-                    payloadLabel = "Weight",
-                    payloadUnit = weightUnit,
-                ),
-                ChoiceOption(
-                    label = "Butterfly",
-                    order = 1,
-                    payloadKind = EnumPayloadKind.DECIMAL,
-                    payloadLabel = "Weight",
-                    payloadUnit = weightUnit,
-                ),
-                ChoiceOption(
-                    label = "Push-ups",
-                    order = 2,
-                    payloadKind = EnumPayloadKind.INTEGER,
-                    payloadLabel = "Repetitions",
-                    payloadUnit = "reps",
-                ),
-            )
-            TrackerDefinition(
-                id = trackerId,
-                name = "Workout",
-                kind = TrackerKind.ENUM,
-                iconKey = TrackerGlyphUi.FITNESS.name,
-                colorArgb = SignalPalette.Coral.value.toLong(),
-                fields = listOf(TrackerField(label = "Exercise", kind = FieldKind.ENUM, options = options)),
-                quickAdd = QuickAddConfig(QuickAddMode.OPEN_EDITOR),
-            )
-        }
-        else -> null
     }
 }

@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -165,6 +166,59 @@ private fun androidx.compose.foundation.lazy.LazyListScope.basicsItems(
     state: TrackerBuilderUiState,
     onAction: (TrackerBuilderAction) -> Unit,
 ) {
+    if (state.editingTrackerId == null && state.templates.isNotEmpty()) {
+        item {
+            SectionHeader("Start with a template")
+            Text(
+                "Choose a common setup, then customize any field before saving.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                state.templates.forEach { template ->
+                    Card(
+                        modifier = Modifier.width(196.dp).clickable {
+                            onAction(TrackerBuilderAction.TemplateSelected(template.id))
+                        },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (state.selectedTemplateId == template.id) {
+                                template.accent.copy(alpha = 0.14f)
+                            } else MaterialTheme.colorScheme.surface
+                        ),
+                        border = if (state.selectedTemplateId == template.id) {
+                            BorderStroke(1.5.dp, template.accent)
+                        } else null,
+                    ) {
+                        Column(
+                            Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            TrackerGlyph(template.glyph, template.accent, null, Modifier.size(34.dp))
+                            Text(
+                                template.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                minLines = 2,
+                                maxLines = 2,
+                            )
+                            Text(
+                                template.description,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                minLines = 3,
+                                maxLines = 3,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
     item {
         OutlinedTextField(
             value = state.name,

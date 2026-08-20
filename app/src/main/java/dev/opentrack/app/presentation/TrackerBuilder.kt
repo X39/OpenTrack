@@ -24,6 +24,7 @@ import dev.opentrack.app.ui.model.TrackerBuilderUiState
 import dev.opentrack.app.ui.model.TrackerKindUi
 import dev.opentrack.app.ui.theme.SignalPalette
 import java.time.Instant
+import java.time.Clock
 
 internal object TrackerBuilderLogic {
     private const val LAST_STEP = 3
@@ -31,13 +32,35 @@ internal object TrackerBuilderLogic {
     fun initial(existing: TrackerDefinition? = null): TrackerBuilderUiState {
         if (existing == null) return TrackerBuilderUiState(
             accent = SignalPalette.Moss,
+            templates = builderTemplateUi(),
             canContinue = false,
         )
+        return fromDefinition(existing, editing = true)
+    }
+
+    fun fromTemplate(
+        key: String,
+        metric: Boolean = true,
+        clock: Clock = Clock.systemUTC(),
+    ): TrackerBuilderUiState = fromDefinition(
+        definition = starterTemplateDefinition(key, metric, clock),
+        editing = false,
+        selectedTemplateId = key,
+    )
+
+    private fun fromDefinition(
+        definition: TrackerDefinition,
+        editing: Boolean,
+        selectedTemplateId: String? = null,
+    ): TrackerBuilderUiState {
+        val existing = definition
         val activeFields = existing.fields.filter { it.archivedAt == null }.sortedBy { it.order }
         val primary = activeFields.firstOrNull()
         return recalculate(
             TrackerBuilderUiState(
-                editingTrackerId = existing.id,
+                editingTrackerId = existing.id.takeIf { editing },
+                selectedTemplateId = selectedTemplateId,
+                templates = builderTemplateUi(),
                 name = existing.name,
                 kind = existing.kind.toUi(),
                 glyph = existing.glyphUi(),
@@ -45,7 +68,7 @@ internal object TrackerBuilderLogic {
                 precision = existing.timestampPrecision.toUi(),
                 unit = primary?.unit.orEmpty(),
                 options = primary?.options.orEmpty().filter { it.archivedAt == null }
-                    .map { it.toUi(payloadKindLocked = true) },
+                    .map { it.toUi(payloadKindLocked = editing) },
                 fields = if (existing.kind == TrackerKind.GROUP) activeFields.map { field ->
                     BuilderFieldUi(
                         id = field.id,
@@ -54,9 +77,9 @@ internal object TrackerBuilderLogic {
                         required = field.required,
                         unit = field.unit.orEmpty(),
                         options = field.options.filter { it.archivedAt == null }
-                            .map { it.toUi(payloadKindLocked = true) },
-                        structureLocked = true,
-                        requiredLocked = true,
+                            .map { it.toUi(payloadKindLocked = editing) },
+                        structureLocked = editing,
+                        requiredLocked = editing,
                     )
                 } else emptyList(),
                 quickLogMode = existing.quickAdd.mode.toUi(),
@@ -80,9 +103,16 @@ internal object TrackerBuilderLogic {
                 state.copy(step = (state.step + 1).coerceAtMost(LAST_STEP), errorMessage = null)
             } else state.copy(errorMessage = validationMessage(state))
             TrackerBuilderAction.Save -> state
+            is TrackerBuilderAction.TemplateSelected -> if (state.editingTrackerId == null) {
+                fromTemplate(action.id).copy(
+                    step = state.step,
+                    addToDashboard = state.addToDashboard,
+                    templates = state.templates,
+                )
+            } else state
             is TrackerBuilderAction.NameChanged -> state.copy(name = action.value, errorMessage = null)
             is TrackerBuilderAction.KindSelected -> if (state.editingTrackerId == null) {
-                withDefaults(state.copy(kind = action.kind, errorMessage = null))
+                withDefaults(state.copy(kind = action.kind, selectedTemplateId = null, errorMessage = null))
             } else state
             is TrackerBuilderAction.PrecisionSelected -> state.copy(precision = action.precision)
             is TrackerBuilderAction.UnitChanged -> if (state.editingTrackerId == null) {
