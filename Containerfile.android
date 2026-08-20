@@ -1,0 +1,35 @@
+FROM docker.io/library/gradle:9.5.0-jdk17-jammy
+
+USER root
+
+ARG ANDROID_COMMAND_LINE_TOOLS_VERSION=15859902
+ARG ANDROID_COMMAND_LINE_TOOLS_SHA1=040d3996a65543d22ec4bf73e4c37aa37a8d4af4
+
+ENV ANDROID_HOME=/opt/android-sdk \
+    ANDROID_SDK_ROOT=/opt/android-sdk \
+    PATH=/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/build-tools/36.0.0:/opt/android-sdk/platform-tools:${PATH}
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install --yes --no-install-recommends ca-certificates curl unzip; \
+    rm -rf /var/lib/apt/lists/*; \
+    tools_archive="commandlinetools-linux-${ANDROID_COMMAND_LINE_TOOLS_VERSION}_latest.zip"; \
+    curl --fail --location --retry 3 \
+        "https://dl.google.com/android/repository/${tools_archive}" \
+        --output "/tmp/${tools_archive}"; \
+    echo "${ANDROID_COMMAND_LINE_TOOLS_SHA1}  /tmp/${tools_archive}" | sha1sum --check --strict; \
+    mkdir -p "${ANDROID_SDK_ROOT}/cmdline-tools" /tmp/android-command-line-tools; \
+    unzip -q "/tmp/${tools_archive}" -d /tmp/android-command-line-tools; \
+    mv /tmp/android-command-line-tools/cmdline-tools "${ANDROID_SDK_ROOT}/cmdline-tools/latest"; \
+    rm -rf "/tmp/${tools_archive}" /tmp/android-command-line-tools; \
+    yes | sdkmanager --licenses >/dev/null; \
+    sdkmanager --install \
+        "build-tools;36.0.0" \
+        "platform-tools" \
+        "platforms;android-36"; \
+    chmod -R a+rX "${ANDROID_SDK_ROOT}"
+
+WORKDIR /workspace
+
+LABEL org.opencontainers.image.title="OpenTrack Android release builder" \
+      org.opencontainers.image.description="Pinned JDK, Gradle, and Android SDK toolchain for OpenTrack"

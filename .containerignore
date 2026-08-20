@@ -1,0 +1,12 @@
+.git/
+.gradle/
+.kotlin/
+.idea/
+.signing/
+artifacts/
+**/build/
+local.properties
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/

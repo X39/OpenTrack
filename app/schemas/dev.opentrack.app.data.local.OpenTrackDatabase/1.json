@@ -1,0 +1,1112 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "96dc725b4327f0127ef97e99e578a006",
+    "entities": [
+      {
+        "tableName": "trackers",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `description` TEXT, `kind` TEXT NOT NULL, `timestampPrecision` TEXT NOT NULL, `iconKey` TEXT, `colorArgb` INTEGER, `position` INTEGER NOT NULL, `archivedAtMillis` INTEGER, `createdAtMillis` INTEGER NOT NULL, `updatedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestampPrecision",
+            "columnName": "timestampPrecision",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "iconKey",
+            "columnName": "iconKey",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "colorArgb",
+            "columnName": "colorArgb",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "archivedAtMillis",
+            "columnName": "archivedAtMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "createdAtMillis",
+            "columnName": "createdAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtMillis",
+            "columnName": "updatedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_trackers_archivedAtMillis",
+            "unique": false,
+            "columnNames": [
+              "archivedAtMillis"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_trackers_archivedAtMillis` ON `${TABLE_NAME}` (`archivedAtMillis`)"
+          },
+          {
+            "name": "index_trackers_position",
+            "unique": false,
+            "columnNames": [
+              "position"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_trackers_position` ON `${TABLE_NAME}` (`position`)"
+          }
+        ]
+      },
+      {
+        "tableName": "tracker_fields",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `trackerId` TEXT NOT NULL, `label` TEXT NOT NULL, `kind` TEXT NOT NULL, `required` INTEGER NOT NULL, `position` INTEGER NOT NULL, `unit` TEXT, `decimalPlaces` INTEGER NOT NULL, `counterQuickDelta` INTEGER NOT NULL, `timestampPrecision` TEXT, `archivedAtMillis` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`trackerId`) REFERENCES `trackers`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trackerId",
+            "columnName": "trackerId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "required",
+            "columnName": "required",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unit",
+            "columnName": "unit",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "decimalPlaces",
+            "columnName": "decimalPlaces",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "counterQuickDelta",
+            "columnName": "counterQuickDelta",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestampPrecision",
+            "columnName": "timestampPrecision",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "archivedAtMillis",
+            "columnName": "archivedAtMillis",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_tracker_fields_trackerId",
+            "unique": false,
+            "columnNames": [
+              "trackerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tracker_fields_trackerId` ON `${TABLE_NAME}` (`trackerId`)"
+          },
+          {
+            "name": "index_tracker_fields_trackerId_position",
+            "unique": false,
+            "columnNames": [
+              "trackerId",
+              "position"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tracker_fields_trackerId_position` ON `${TABLE_NAME}` (`trackerId`, `position`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "trackers",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "trackerId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "choice_options",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `fieldId` TEXT NOT NULL, `label` TEXT NOT NULL, `colorArgb` INTEGER, `position` INTEGER NOT NULL, `radioScore` REAL, `payloadKind` TEXT NOT NULL, `payloadLabel` TEXT, `payloadUnit` TEXT, `archivedAtMillis` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`fieldId`) REFERENCES `tracker_fields`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fieldId",
+            "columnName": "fieldId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "colorArgb",
+            "columnName": "colorArgb",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "radioScore",
+            "columnName": "radioScore",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "payloadKind",
+            "columnName": "payloadKind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "payloadLabel",
+            "columnName": "payloadLabel",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "payloadUnit",
+            "columnName": "payloadUnit",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "archivedAtMillis",
+            "columnName": "archivedAtMillis",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_choice_options_fieldId",
+            "unique": false,
+            "columnNames": [
+              "fieldId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_choice_options_fieldId` ON `${TABLE_NAME}` (`fieldId`)"
+          },
+          {
+            "name": "index_choice_options_fieldId_position",
+            "unique": false,
+            "columnNames": [
+              "fieldId",
+              "position"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_choice_options_fieldId_position` ON `${TABLE_NAME}` (`fieldId`, `position`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "tracker_fields",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "fieldId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "quick_presets",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `trackerId` TEXT NOT NULL, `label` TEXT NOT NULL, `position` INTEGER NOT NULL, `note` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`trackerId`) REFERENCES `trackers`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trackerId",
+            "columnName": "trackerId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_quick_presets_trackerId",
+            "unique": false,
+            "columnNames": [
+              "trackerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_quick_presets_trackerId` ON `${TABLE_NAME}` (`trackerId`)"
+          },
+          {
+            "name": "index_quick_presets_trackerId_position",
+            "unique": false,
+            "columnNames": [
+              "trackerId",
+              "position"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_quick_presets_trackerId_position` ON `${TABLE_NAME}` (`trackerId`, `position`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "trackers",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "trackerId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "quick_add_configs",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`trackerId` TEXT NOT NULL, `mode` TEXT NOT NULL, `defaultPresetId` TEXT, PRIMARY KEY(`trackerId`), FOREIGN KEY(`trackerId`) REFERENCES `trackers`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`defaultPresetId`) REFERENCES `quick_presets`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "fields": [
+          {
+            "fieldPath": "trackerId",
+            "columnName": "trackerId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "mode",
+            "columnName": "mode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "defaultPresetId",
+            "columnName": "defaultPresetId",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "trackerId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_quick_add_configs_defaultPresetId",
+            "unique": false,
+            "columnNames": [
+              "defaultPresetId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_quick_add_configs_defaultPresetId` ON `${TABLE_NAME}` (`defaultPresetId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "trackers",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "trackerId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "quick_presets",
+            "onDelete": "SET NULL",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "defaultPresetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "quick_preset_values",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`presetId` TEXT NOT NULL, `fieldId` TEXT NOT NULL, `timestampMode` TEXT, `stored_optionId` TEXT, `stored_decimalValue` REAL, `stored_integerValue` INTEGER, `stored_booleanValue` INTEGER, `stored_durationMillis` INTEGER, `stored_textValue` TEXT, `stored_timestampPrecision` TEXT, `stored_localEpochDay` INTEGER, `stored_instantMillis` INTEGER, `stored_zoneId` TEXT, `stored_offsetSeconds` INTEGER, `stored_localSecondOfDay` INTEGER, PRIMARY KEY(`presetId`, `fieldId`), FOREIGN KEY(`presetId`) REFERENCES `quick_presets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`fieldId`) REFERENCES `tracker_fields`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "presetId",
+            "columnName": "presetId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fieldId",
+            "columnName": "fieldId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestampMode",
+            "columnName": "timestampMode",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "stored.optionId",
+            "columnName": "stored_optionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "stored.decimalValue",
+            "columnName": "stored_decimalValue",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "stored.integerValue",
+            "columnName": "stored_integerValue",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.booleanValue",
+            "columnName": "stored_booleanValue",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.durationMillis",
+            "columnName": "stored_durationMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.textValue",
+            "columnName": "stored_textValue",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "stored.timestampPrecision",
+            "columnName": "stored_timestampPrecision",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "stored.localEpochDay",
+            "columnName": "stored_localEpochDay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.instantMillis",
+            "columnName": "stored_instantMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.zoneId",
+            "columnName": "stored_zoneId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "stored.offsetSeconds",
+            "columnName": "stored_offsetSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.localSecondOfDay",
+            "columnName": "stored_localSecondOfDay",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "presetId",
+            "fieldId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_quick_preset_values_fieldId",
+            "unique": false,
+            "columnNames": [
+              "fieldId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_quick_preset_values_fieldId` ON `${TABLE_NAME}` (`fieldId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "quick_presets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "presetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "tracker_fields",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "fieldId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "entries",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `trackerId` TEXT NOT NULL, `precision` TEXT NOT NULL, `localEpochDay` INTEGER NOT NULL, `instantMillis` INTEGER, `zoneId` TEXT, `offsetSeconds` INTEGER, `localSecondOfDay` INTEGER, `note` TEXT, `createdAtMillis` INTEGER NOT NULL, `updatedAtMillis` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`trackerId`) REFERENCES `trackers`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trackerId",
+            "columnName": "trackerId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "precision",
+            "columnName": "precision",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "localEpochDay",
+            "columnName": "localEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "instantMillis",
+            "columnName": "instantMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "zoneId",
+            "columnName": "zoneId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "offsetSeconds",
+            "columnName": "offsetSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "localSecondOfDay",
+            "columnName": "localSecondOfDay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAtMillis",
+            "columnName": "createdAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtMillis",
+            "columnName": "updatedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_entries_trackerId",
+            "unique": false,
+            "columnNames": [
+              "trackerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entries_trackerId` ON `${TABLE_NAME}` (`trackerId`)"
+          },
+          {
+            "name": "index_entries_trackerId_localEpochDay",
+            "unique": false,
+            "columnNames": [
+              "trackerId",
+              "localEpochDay"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entries_trackerId_localEpochDay` ON `${TABLE_NAME}` (`trackerId`, `localEpochDay`)"
+          },
+          {
+            "name": "index_entries_trackerId_instantMillis",
+            "unique": false,
+            "columnNames": [
+              "trackerId",
+              "instantMillis"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entries_trackerId_instantMillis` ON `${TABLE_NAME}` (`trackerId`, `instantMillis`)"
+          },
+          {
+            "name": "index_entries_updatedAtMillis",
+            "unique": false,
+            "columnNames": [
+              "updatedAtMillis"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entries_updatedAtMillis` ON `${TABLE_NAME}` (`updatedAtMillis`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "trackers",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "trackerId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "entry_values",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`entryId` TEXT NOT NULL, `fieldId` TEXT NOT NULL, `stored_optionId` TEXT, `stored_decimalValue` REAL, `stored_integerValue` INTEGER, `stored_booleanValue` INTEGER, `stored_durationMillis` INTEGER, `stored_textValue` TEXT, `stored_timestampPrecision` TEXT, `stored_localEpochDay` INTEGER, `stored_instantMillis` INTEGER, `stored_zoneId` TEXT, `stored_offsetSeconds` INTEGER, `stored_localSecondOfDay` INTEGER, PRIMARY KEY(`entryId`, `fieldId`), FOREIGN KEY(`entryId`) REFERENCES `entries`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`fieldId`) REFERENCES `tracker_fields`(`id`) ON UPDATE NO ACTION ON DELETE NO ACTION )",
+        "fields": [
+          {
+            "fieldPath": "entryId",
+            "columnName": "entryId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fieldId",
+            "columnName": "fieldId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stored.optionId",
+            "columnName": "stored_optionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "stored.decimalValue",
+            "columnName": "stored_decimalValue",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "stored.integerValue",
+            "columnName": "stored_integerValue",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.booleanValue",
+            "columnName": "stored_booleanValue",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.durationMillis",
+            "columnName": "stored_durationMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.textValue",
+            "columnName": "stored_textValue",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "stored.timestampPrecision",
+            "columnName": "stored_timestampPrecision",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "stored.localEpochDay",
+            "columnName": "stored_localEpochDay",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.instantMillis",
+            "columnName": "stored_instantMillis",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.zoneId",
+            "columnName": "stored_zoneId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "stored.offsetSeconds",
+            "columnName": "stored_offsetSeconds",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "stored.localSecondOfDay",
+            "columnName": "stored_localSecondOfDay",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "entryId",
+            "fieldId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_entry_values_fieldId",
+            "unique": false,
+            "columnNames": [
+              "fieldId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entry_values_fieldId` ON `${TABLE_NAME}` (`fieldId`)"
+          },
+          {
+            "name": "index_entry_values_stored_optionId",
+            "unique": false,
+            "columnNames": [
+              "stored_optionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_entry_values_stored_optionId` ON `${TABLE_NAME}` (`stored_optionId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "entries",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "entryId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "tracker_fields",
+            "onDelete": "NO ACTION",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "fieldId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "dashboards",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `position` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_dashboards_position",
+            "unique": false,
+            "columnNames": [
+              "position"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dashboards_position` ON `${TABLE_NAME}` (`position`)"
+          }
+        ]
+      },
+      {
+        "tableName": "dashboard_widgets",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `dashboardId` TEXT NOT NULL, `kind` TEXT NOT NULL, `title` TEXT, `chartStyle` TEXT NOT NULL, `rangePreset` TEXT NOT NULL, `bucket` TEXT NOT NULL, `position` INTEGER NOT NULL, `span` TEXT NOT NULL, `visible` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`dashboardId`) REFERENCES `dashboards`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dashboardId",
+            "columnName": "dashboardId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "kind",
+            "columnName": "kind",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "chartStyle",
+            "columnName": "chartStyle",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rangePreset",
+            "columnName": "rangePreset",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bucket",
+            "columnName": "bucket",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "span",
+            "columnName": "span",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "visible",
+            "columnName": "visible",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_dashboard_widgets_dashboardId",
+            "unique": false,
+            "columnNames": [
+              "dashboardId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dashboard_widgets_dashboardId` ON `${TABLE_NAME}` (`dashboardId`)"
+          },
+          {
+            "name": "index_dashboard_widgets_dashboardId_position",
+            "unique": false,
+            "columnNames": [
+              "dashboardId",
+              "position"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dashboard_widgets_dashboardId_position` ON `${TABLE_NAME}` (`dashboardId`, `position`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "dashboards",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "dashboardId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "dashboard_series",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `widgetId` TEXT NOT NULL, `trackerId` TEXT NOT NULL, `fieldId` TEXT, `optionId` TEXT, `metric` TEXT NOT NULL, `aggregation` TEXT NOT NULL, `colorArgb` INTEGER, `position` INTEGER NOT NULL, `presetId` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`widgetId`) REFERENCES `dashboard_widgets`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`trackerId`) REFERENCES `trackers`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "widgetId",
+            "columnName": "widgetId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trackerId",
+            "columnName": "trackerId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fieldId",
+            "columnName": "fieldId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "optionId",
+            "columnName": "optionId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "metric",
+            "columnName": "metric",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aggregation",
+            "columnName": "aggregation",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "colorArgb",
+            "columnName": "colorArgb",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "presetId",
+            "columnName": "presetId",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_dashboard_series_widgetId",
+            "unique": false,
+            "columnNames": [
+              "widgetId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dashboard_series_widgetId` ON `${TABLE_NAME}` (`widgetId`)"
+          },
+          {
+            "name": "index_dashboard_series_trackerId",
+            "unique": false,
+            "columnNames": [
+              "trackerId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dashboard_series_trackerId` ON `${TABLE_NAME}` (`trackerId`)"
+          },
+          {
+            "name": "index_dashboard_series_fieldId",
+            "unique": false,
+            "columnNames": [
+              "fieldId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dashboard_series_fieldId` ON `${TABLE_NAME}` (`fieldId`)"
+          },
+          {
+            "name": "index_dashboard_series_optionId",
+            "unique": false,
+            "columnNames": [
+              "optionId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_dashboard_series_optionId` ON `${TABLE_NAME}` (`optionId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "dashboard_widgets",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "widgetId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "trackers",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "trackerId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '96dc725b4327f0127ef97e99e578a006')"
+    ]
+  }
+}
