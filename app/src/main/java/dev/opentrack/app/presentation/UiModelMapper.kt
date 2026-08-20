@@ -28,6 +28,7 @@ import dev.opentrack.app.ui.model.CalendarDayUi
 import dev.opentrack.app.ui.model.CalendarGridUi
 import dev.opentrack.app.ui.model.ChartBarUi
 import dev.opentrack.app.ui.model.ChartPointUi
+import dev.opentrack.app.ui.model.ChartStyleUi
 import dev.opentrack.app.ui.model.DashboardEditorItemUi
 import dev.opentrack.app.ui.model.DashboardEditorUiState
 import dev.opentrack.app.ui.model.DashboardUiState
@@ -173,6 +174,8 @@ internal object UiModelMapper {
                 DashboardEditorItemUi(
                     widget = widget.toUi(tracker, entries.filter { it.trackerId == tracker.id }, today, weekStartsMonday),
                     visible = widget.visible,
+                    chartStyle = widget.chartStyle.toUi(),
+                    availableChartStyles = compatibleChartStyles(widget.series.single().metric),
                 )
             },
             hasTrackers = definitions.any { it.archivedAt == null },
@@ -373,9 +376,11 @@ internal object UiModelMapper {
                 "${entries.size} entries",
             )
         }
-        if (resolvedStyle == ChartStyle.DISTRIBUTION) {
+        if (resolvedStyle == ChartStyle.DISTRIBUTION || resolvedStyle == ChartStyle.DONUT) {
             val parts = field?.let { distribution(it, entries) }.orEmpty()
-            if (parts.isNotEmpty()) return WidgetChartUi.Distribution(parts, "${entries.size} entries")
+            if (parts.isNotEmpty()) return if (resolvedStyle == ChartStyle.DONUT) {
+                WidgetChartUi.Donut(parts, "${entries.size} entries")
+            } else WidgetChartUi.Distribution(parts, "${entries.size} entries")
         }
         val values = if (metric == AnalyticsMetric.COUNTER_RUNNING_TOTAL) {
             var total = 0.0
@@ -389,17 +394,19 @@ internal object UiModelMapper {
             }.takeLast(12)
             return WidgetChartUi.Bars(bars, "${values.size} values")
         }
-        return WidgetChartUi.Sparkline(
-            points = values.mapIndexed { index, value ->
+        val points = values.mapIndexed { index, value ->
                 ChartPointUi(
                     x = index.toFloat(),
                     y = value.value.toFloat(),
                     label = value.entry.recordedAt.localDate.toString(),
                     valueLabel = formatNumber(value.value, field?.decimalPlaces ?: 2),
                 )
-            },
-            summary = "${values.size} values",
-        )
+            }
+        return when (resolvedStyle) {
+            ChartStyle.AREA -> WidgetChartUi.Area(points, "${values.size} values")
+            ChartStyle.SCATTER -> WidgetChartUi.Scatter(points, "${values.size} values")
+            else -> WidgetChartUi.Sparkline(points, "${values.size} values")
+        }
     }
 
     private fun TrackerEntry.bucketLabel(bucket: TimeBucket): String = when (bucket) {
@@ -833,5 +840,39 @@ internal object UiModelMapper {
         TimeRangePreset.THREE_MONTHS -> DateRangeUi.QUARTER
         TimeRangePreset.ONE_YEAR -> DateRangeUi.YEAR
         TimeRangePreset.ALL -> DateRangeUi.ALL
+    }
+
+    private fun ChartStyle.toUi() = when (this) {
+        ChartStyle.AUTO -> ChartStyleUi.AUTO
+        ChartStyle.LINE -> ChartStyleUi.LINE
+        ChartStyle.BAR -> ChartStyleUi.BAR
+        ChartStyle.AREA -> ChartStyleUi.AREA
+        ChartStyle.SCATTER -> ChartStyleUi.SCATTER
+        ChartStyle.DISTRIBUTION -> ChartStyleUi.DISTRIBUTION
+        ChartStyle.DONUT -> ChartStyleUi.DONUT
+        ChartStyle.CALENDAR -> ChartStyleUi.CALENDAR
+    }
+
+    private fun compatibleChartStyles(metric: AnalyticsMetric): List<ChartStyleUi> = when (metric) {
+        AnalyticsMetric.ENUM_COUNT, AnalyticsMetric.TRUE_COUNT, AnalyticsMetric.TRUE_RATE -> listOf(
+            ChartStyleUi.AUTO,
+            ChartStyleUi.DISTRIBUTION,
+            ChartStyleUi.DONUT,
+            ChartStyleUi.BAR,
+            ChartStyleUi.CALENDAR,
+        )
+        AnalyticsMetric.OCCURRENCE_COUNT, AnalyticsMetric.LAST_RECORDED -> listOf(
+            ChartStyleUi.AUTO,
+            ChartStyleUi.CALENDAR,
+            ChartStyleUi.BAR,
+        )
+        else -> listOf(
+            ChartStyleUi.AUTO,
+            ChartStyleUi.LINE,
+            ChartStyleUi.AREA,
+            ChartStyleUi.BAR,
+            ChartStyleUi.SCATTER,
+            ChartStyleUi.CALENDAR,
+        )
     }
 }

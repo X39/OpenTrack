@@ -196,6 +196,7 @@ fun OpenTrackApp(
                         onAddWidget = viewModel::addDashboardWidget,
                         onToggleVisible = viewModel::setWidgetVisible,
                         onEditWidget = viewModel::editDashboardWidget,
+                        onChartStyleChanged = viewModel::setWidgetChartStyle,
                         onRemoveWidget = viewModel::removeDashboardWidget,
                         onMoveWidget = viewModel::moveDashboardWidget,
                         modifier = screenModifier,

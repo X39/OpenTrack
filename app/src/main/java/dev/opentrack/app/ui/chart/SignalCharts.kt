@@ -59,6 +59,7 @@ fun SignalSparkline(
     summary: String,
     color: Color,
     modifier: Modifier = Modifier,
+    fillArea: Boolean = false,
 ) {
     val sorted = remember(points) { points.sortedBy { it.x } }
     Canvas(
@@ -82,24 +83,91 @@ fun SignalSparkline(
             return@Canvas
         }
         val line = pathThrough(coordinates)
-        val fill = Path().apply {
-            addPath(line)
-            lineTo(coordinates.last().x, size.height)
-            lineTo(coordinates.first().x, size.height)
-            close()
+        if (fillArea) {
+            val fill = Path().apply {
+                addPath(line)
+                lineTo(coordinates.last().x, size.height)
+                lineTo(coordinates.first().x, size.height)
+                close()
+            }
+            drawPath(
+                path = fill,
+                brush = Brush.verticalGradient(
+                    colors = listOf(color.copy(alpha = 0.34f), Color.Transparent),
+                ),
+            )
         }
-        drawPath(
-            path = fill,
-            brush = Brush.verticalGradient(
-                colors = listOf(color.copy(alpha = 0.24f), Color.Transparent),
-            ),
-        )
         drawPath(
             path = line,
             color = color,
             style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round),
         )
         drawCircle(color = color, radius = 3.dp.toPx(), center = coordinates.last())
+    }
+}
+
+@Composable
+fun SignalScatterPlot(
+    points: List<ChartPointUi>,
+    summary: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    val sorted = remember(points) { points.sortedBy { it.x } }
+    Canvas(
+        modifier = modifier.height(52.dp).semantics(mergeDescendants = true) { contentDescription = summary },
+    ) {
+        repeat(3) { index ->
+            val y = size.height * index / 2f
+            drawLine(Color.Gray.copy(alpha = 0.12f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx())
+        }
+        sorted.toOffsets(size.width, size.height, 5.dp.toPx()).forEach { point ->
+            drawCircle(color.copy(alpha = 0.2f), radius = 6.dp.toPx(), center = point)
+            drawCircle(color, radius = 3.dp.toPx(), center = point)
+        }
+    }
+}
+
+@Composable
+fun SignalDonutChart(
+    parts: List<DistributionPartUi>,
+    summary: String,
+    modifier: Modifier = Modifier,
+) {
+    val usable = remember(parts) { parts.filter { it.value > 0f } }
+    val total = usable.sumOf { it.value.toDouble() }.toFloat().coerceAtLeast(1f)
+    Canvas(
+        modifier = modifier.height(60.dp).semantics(mergeDescendants = true) { contentDescription = summary },
+    ) {
+        val diameter = minOf(size.width, size.height) - 4.dp.toPx()
+        val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
+        val arcSize = Size(diameter, diameter)
+        if (usable.isEmpty()) {
+            drawArc(
+                color = Color.Gray.copy(alpha = 0.18f),
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = 10.dp.toPx()),
+            )
+            return@Canvas
+        }
+        var startAngle = -90f
+        usable.forEach { part ->
+            val sweep = (part.value / total) * 360f
+            drawArc(
+                color = part.color,
+                startAngle = startAngle,
+                sweepAngle = (sweep - 2f).coerceAtLeast(0.5f),
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = 10.dp.toPx(), cap = StrokeCap.Round),
+            )
+            startAngle += sweep
+        }
     }
 }
 

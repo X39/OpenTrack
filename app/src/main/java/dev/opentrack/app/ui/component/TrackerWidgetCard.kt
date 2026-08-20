@@ -30,6 +30,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.opentrack.app.ui.chart.SignalBarChart
 import dev.opentrack.app.ui.chart.SignalCalendarHeatmap
+import dev.opentrack.app.ui.chart.SignalDonutChart
+import dev.opentrack.app.ui.chart.SignalScatterPlot
 import dev.opentrack.app.ui.chart.SignalDistributionBar
 import dev.opentrack.app.ui.chart.SignalSparkline
 import dev.opentrack.app.ui.model.DashboardWidgetUi
@@ -108,6 +110,19 @@ private fun WidgetChart(chart: WidgetChartUi, accent: Color, compact: Boolean) {
             color = accent,
             modifier = Modifier.fillMaxWidth().height(if (compact) 40.dp else 52.dp),
         )
+        is WidgetChartUi.Area -> SignalSparkline(
+            points = chart.points,
+            summary = chart.summary,
+            color = accent,
+            modifier = Modifier.fillMaxWidth().height(if (compact) 40.dp else 52.dp),
+            fillArea = true,
+        )
+        is WidgetChartUi.Scatter -> SignalScatterPlot(
+            points = chart.points,
+            summary = chart.summary,
+            color = accent,
+            modifier = Modifier.fillMaxWidth(),
+        )
         is WidgetChartUi.Bars -> SignalBarChart(
             bars = chart.bars,
             summary = chart.summary,
@@ -121,6 +136,11 @@ private fun WidgetChart(chart: WidgetChartUi, accent: Color, compact: Boolean) {
             summary = chart.summary,
             modifier = Modifier.fillMaxWidth(),
             showLegend = false,
+        )
+        is WidgetChartUi.Donut -> SignalDonutChart(
+            parts = chart.parts,
+            summary = chart.summary,
+            modifier = Modifier.fillMaxWidth(),
         )
         is WidgetChartUi.Calendar -> SignalCalendarHeatmap(
             grid = chart.grid,

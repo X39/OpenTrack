@@ -15,7 +15,7 @@ enum class EnumPayloadKind { NONE, DECIMAL, INTEGER, DURATION, TEXT }
 enum class QuickAddMode { AUTO, OPEN_EDITOR, DEFAULT_PRESET }
 enum class TimestampPresetMode { LITERAL, NOW, TODAY }
 enum class DashboardWidgetKind { QUICK_ADD, LAST_RECORDED, LATEST_VALUE, SUMMARY, CHART }
-enum class ChartStyle { AUTO, LINE, BAR, AREA, DISTRIBUTION, CALENDAR }
+enum class ChartStyle { AUTO, LINE, BAR, AREA, SCATTER, DISTRIBUTION, DONUT, CALENDAR }
 enum class TimeBucket { EVENT, DAY, WEEK, MONTH }
 enum class TimeRangePreset { SEVEN_DAYS, THIRTY_DAYS, THREE_MONTHS, ONE_YEAR, ALL }
 enum class AnalyticsMetric {

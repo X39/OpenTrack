@@ -28,6 +28,7 @@ import dev.opentrack.app.domain.repository.TrackerRepository
 import dev.opentrack.app.preferences.AppPreferences
 import dev.opentrack.app.preferences.ThemeMode
 import dev.opentrack.app.ui.model.BackupUiState
+import dev.opentrack.app.ui.model.ChartStyleUi
 import dev.opentrack.app.ui.model.DateRangeUi
 import dev.opentrack.app.ui.model.DetailTabUi
 import dev.opentrack.app.ui.model.OnboardingTemplateUi
@@ -341,6 +342,22 @@ class OpenTrackViewModel(
             if (widget.id != widgetId) widget else widget.copy(
                 span = if (widget.span == WidgetSpan.WIDE) WidgetSpan.COMPACT else WidgetSpan.WIDE,
             )
+        })
+    }
+
+    fun setWidgetChartStyle(widgetId: String, style: ChartStyleUi) = mutateDashboard { dashboard ->
+        val chartStyle = when (style) {
+            ChartStyleUi.AUTO -> ChartStyle.AUTO
+            ChartStyleUi.LINE -> ChartStyle.LINE
+            ChartStyleUi.BAR -> ChartStyle.BAR
+            ChartStyleUi.AREA -> ChartStyle.AREA
+            ChartStyleUi.SCATTER -> ChartStyle.SCATTER
+            ChartStyleUi.DISTRIBUTION -> ChartStyle.DISTRIBUTION
+            ChartStyleUi.DONUT -> ChartStyle.DONUT
+            ChartStyleUi.CALENDAR -> ChartStyle.CALENDAR
+        }
+        dashboard.copy(widgets = dashboard.widgets.map { widget ->
+            if (widget.id == widgetId) widget.copy(chartStyle = chartStyle) else widget
         })
     }
 

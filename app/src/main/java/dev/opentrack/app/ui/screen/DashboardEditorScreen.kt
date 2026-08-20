@@ -1,5 +1,6 @@
 package dev.opentrack.app.ui.screen
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ArrowDownward
@@ -22,6 +24,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -36,6 +39,7 @@ import dev.opentrack.app.ui.component.SignalTopBar
 import dev.opentrack.app.ui.component.TrackerGlyph
 import dev.opentrack.app.ui.model.DashboardEditorItemUi
 import dev.opentrack.app.ui.model.DashboardEditorUiState
+import dev.opentrack.app.ui.model.ChartStyleUi
 
 @Composable
 fun DashboardEditorScreen(
@@ -44,6 +48,7 @@ fun DashboardEditorScreen(
     onAddWidget: () -> Unit,
     onToggleVisible: (String, Boolean) -> Unit,
     onEditWidget: (String) -> Unit,
+    onChartStyleChanged: (String, ChartStyleUi) -> Unit,
     onRemoveWidget: (String) -> Unit,
     onMoveWidget: (String, Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -95,6 +100,7 @@ fun DashboardEditorScreen(
                         canMoveDown = index < state.items.lastIndex,
                         onToggle = { onToggleVisible(item.widget.id, it) },
                         onEdit = { onEditWidget(item.widget.id) },
+                        onChartStyleChanged = { onChartStyleChanged(item.widget.id, it) },
                         onRemove = { onRemoveWidget(item.widget.id) },
                         onMoveUp = { onMoveWidget(item.widget.id, -1) },
                         onMoveDown = { onMoveWidget(item.widget.id, 1) },
@@ -112,6 +118,7 @@ private fun EditorWidgetRow(
     canMoveDown: Boolean,
     onToggle: (Boolean) -> Unit,
     onEdit: () -> Unit,
+    onChartStyleChanged: (ChartStyleUi) -> Unit,
     onRemove: () -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
@@ -124,17 +131,30 @@ private fun EditorWidgetRow(
                 Column(Modifier.weight(1f)) {
                     Text(item.widget.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(
-                        "${item.widget.size.label} · ${item.widget.metric}",
+                        "${item.widget.size.label} · ${item.chartStyle.label} · ${item.widget.metric}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Switch(checked = item.visible, onCheckedChange = onToggle)
             }
+            Text("Graph style", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                item.availableChartStyles.forEach { style ->
+                    FilterChip(
+                        selected = item.chartStyle == style,
+                        onClick = { onChartStyleChanged(style) },
+                        label = { Text(style.label) },
+                    )
+                }
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 IconButton(onClick = onMoveUp, enabled = canMoveUp) { Icon(Icons.Rounded.ArrowUpward, "Move up") }
                 IconButton(onClick = onMoveDown, enabled = canMoveDown) { Icon(Icons.Rounded.ArrowDownward, "Move down") }
-                IconButton(onClick = onEdit) { Icon(Icons.Rounded.AspectRatio, "Change widget size") }
+                IconButton(onClick = onEdit) { Icon(Icons.Rounded.AspectRatio, "Toggle widget size") }
                 IconButton(onClick = onRemove) { Icon(Icons.Rounded.DeleteOutline, "Remove widget") }
             }
         }

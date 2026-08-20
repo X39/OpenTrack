@@ -46,6 +46,12 @@ enum class WidgetSizeUi(val label: String) {
 }
 
 @Immutable
+enum class ChartStyleUi(val label: String) {
+    AUTO("Auto"), LINE("Line"), BAR("Bars"), AREA("Area"), SCATTER("Scatter"),
+    DISTRIBUTION("Distribution"), DONUT("Donut"), CALENDAR("Calendar"),
+}
+
+@Immutable
 enum class WidgetMetricUi(val label: String) {
     LATEST("Latest value"), LAST_TRACKED("Last tracked"), TREND("Trend"),
     COUNT("Count"), STREAK("Streak"), DISTRIBUTION("Distribution"),
@@ -104,10 +110,19 @@ sealed interface WidgetChartUi {
     data class Sparkline(val points: List<ChartPointUi>, val summary: String) : WidgetChartUi
 
     @Immutable
+    data class Area(val points: List<ChartPointUi>, val summary: String) : WidgetChartUi
+
+    @Immutable
+    data class Scatter(val points: List<ChartPointUi>, val summary: String) : WidgetChartUi
+
+    @Immutable
     data class Bars(val bars: List<ChartBarUi>, val summary: String) : WidgetChartUi
 
     @Immutable
     data class Distribution(val parts: List<DistributionPartUi>, val summary: String) : WidgetChartUi
+
+    @Immutable
+    data class Donut(val parts: List<DistributionPartUi>, val summary: String) : WidgetChartUi
 
     @Immutable
     data class Calendar(val grid: CalendarGridUi, val summary: String) : WidgetChartUi
@@ -262,6 +277,8 @@ data class TrackerDetailUiState(
 data class DashboardEditorItemUi(
     val widget: DashboardWidgetUi,
     val visible: Boolean = true,
+    val chartStyle: ChartStyleUi = ChartStyleUi.AUTO,
+    val availableChartStyles: List<ChartStyleUi> = listOf(ChartStyleUi.AUTO),
 )
 
 @Immutable

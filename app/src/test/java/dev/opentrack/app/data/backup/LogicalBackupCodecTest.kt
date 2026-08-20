@@ -2,9 +2,16 @@ package dev.opentrack.app.data.backup
 
 import com.google.common.truth.Truth.assertThat
 import dev.opentrack.app.domain.model.BackupSnapshot
+import dev.opentrack.app.domain.model.Aggregation
+import dev.opentrack.app.domain.model.AnalyticsMetric
 import dev.opentrack.app.domain.model.CalendarRange
 import dev.opentrack.app.domain.model.CalendarSpan
 import dev.opentrack.app.domain.model.CalendarWeekStart
+import dev.opentrack.app.domain.model.ChartStyle
+import dev.opentrack.app.domain.model.Dashboard
+import dev.opentrack.app.domain.model.DashboardSeries
+import dev.opentrack.app.domain.model.DashboardWidget
+import dev.opentrack.app.domain.model.DashboardWidgetKind
 import dev.opentrack.app.domain.model.FieldValue
 import dev.opentrack.app.domain.model.RecordedAt
 import dev.opentrack.app.domain.model.TrackerEntry
@@ -47,7 +54,23 @@ class LogicalBackupCodecTest {
             createdAt = instant,
             updatedAt = instant,
         )
-        val original = BackupSnapshot(listOf(definition), listOf(entry), emptyList(), instant)
+        val dashboard = Dashboard(
+            widgets = listOf(
+                DashboardWidget(
+                    kind = DashboardWidgetKind.CHART,
+                    chartStyle = ChartStyle.SCATTER,
+                    series = listOf(
+                        DashboardSeries(
+                            trackerId = definition.id,
+                            fieldId = field.id,
+                            metric = AnalyticsMetric.NUMERIC_VALUE,
+                            aggregation = Aggregation.LAST,
+                        ),
+                    ),
+                ),
+            ),
+        )
+        val original = BackupSnapshot(listOf(definition), listOf(entry), listOf(dashboard), instant)
         val bytes = ByteArrayOutputStream().also { LogicalBackupCodec.write(original, it) }.toByteArray()
 
         val decoded = LogicalBackupCodec.read(ByteArrayInputStream(bytes))

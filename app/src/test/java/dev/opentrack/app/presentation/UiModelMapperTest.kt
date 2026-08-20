@@ -24,6 +24,8 @@ import dev.opentrack.app.domain.model.TimestampCalendarConfig
 import dev.opentrack.app.ui.model.DateRangeUi
 import dev.opentrack.app.ui.model.DetailTabUi
 import dev.opentrack.app.ui.model.DetailChartUi
+import dev.opentrack.app.ui.model.WidgetChartUi
+import dev.opentrack.app.ui.model.ChartStyleUi
 import java.time.Clock
 import java.time.Instant
 import java.time.LocalDate
@@ -245,5 +247,87 @@ class UiModelMapperTest {
 
         assertThat(progress.summary).isEqualTo("2 values in kg")
         assertThat(progress.points.map { it.y }).containsExactly(60f, 67.5f).inOrder()
+    }
+
+    @Test
+    fun `dashboard maps area scatter and donut to distinct graph models`() {
+        val valueField = TrackerField(id = "value", label = "Weight", kind = FieldKind.VALUE)
+        val valueTracker = TrackerDefinition(
+            id = "weight",
+            name = "Weight",
+            kind = TrackerKind.VALUE,
+            fields = listOf(valueField),
+        )
+        val valueEntries = listOf(70.0, 71.0).mapIndexed { index, value ->
+            TrackerEntry(
+                trackerId = valueTracker.id,
+                recordedAt = RecordedAt.Day(LocalDate.of(2026, 8, 18 + index)),
+                values = mapOf(valueField.id to FieldValue.Decimal(value)),
+            )
+        }
+        fun widget(style: ChartStyle) = DashboardWidget(
+            id = style.name,
+            kind = DashboardWidgetKind.CHART,
+            chartStyle = style,
+            series = listOf(
+                DashboardSeries(
+                    trackerId = valueTracker.id,
+                    fieldId = valueField.id,
+                    metric = AnalyticsMetric.NUMERIC_VALUE,
+                    aggregation = Aggregation.LAST,
+                ),
+            ),
+        )
+
+        val area = UiModelMapper.dashboard(
+            listOf(valueTracker), valueEntries,
+            listOf(Dashboard(widgets = listOf(widget(ChartStyle.AREA)))), clock,
+        ).widgets.single().chart
+        val scatter = UiModelMapper.dashboard(
+            listOf(valueTracker), valueEntries,
+            listOf(Dashboard(widgets = listOf(widget(ChartStyle.SCATTER)))), clock,
+        ).widgets.single().chart
+
+        assertThat(area).isInstanceOf(WidgetChartUi.Area::class.java)
+        assertThat(scatter).isInstanceOf(WidgetChartUi.Scatter::class.java)
+
+        val booleanField = TrackerField(id = "done", label = "Done", kind = FieldKind.BOOLEAN)
+        val booleanTracker = TrackerDefinition(
+            id = "habit",
+            name = "Habit",
+            kind = TrackerKind.BOOLEAN,
+            fields = listOf(booleanField),
+        )
+        val booleanEntries = listOf(true, false).mapIndexed { index, value ->
+            TrackerEntry(
+                trackerId = booleanTracker.id,
+                recordedAt = RecordedAt.Day(LocalDate.of(2026, 8, 18 + index)),
+                values = mapOf(booleanField.id to FieldValue.BooleanValue(value)),
+            )
+        }
+        val donutWidget = DashboardWidget(
+            kind = DashboardWidgetKind.CHART,
+            chartStyle = ChartStyle.DONUT,
+            series = listOf(
+                DashboardSeries(
+                    trackerId = booleanTracker.id,
+                    fieldId = booleanField.id,
+                    metric = AnalyticsMetric.TRUE_RATE,
+                    aggregation = Aggregation.AVERAGE,
+                ),
+            ),
+        )
+        val donut = UiModelMapper.dashboard(
+            listOf(booleanTracker), booleanEntries,
+            listOf(Dashboard(widgets = listOf(donutWidget))), clock,
+        ).widgets.single().chart
+        val editor = UiModelMapper.dashboardEditor(
+            listOf(booleanTracker), booleanEntries,
+            listOf(Dashboard(widgets = listOf(donutWidget))), clock,
+        )
+
+        assertThat(donut).isInstanceOf(WidgetChartUi.Donut::class.java)
+        assertThat(editor.items.single().availableChartStyles).contains(ChartStyleUi.DONUT)
+        assertThat(editor.items.single().availableChartStyles).doesNotContain(ChartStyleUi.SCATTER)
     }
 }
