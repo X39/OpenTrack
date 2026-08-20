@@ -7,6 +7,7 @@ import dev.opentrack.app.domain.model.FieldKind
 import dev.opentrack.app.domain.model.FieldValue
 import dev.opentrack.app.domain.model.QuickAddConfig
 import dev.opentrack.app.domain.model.QuickAddMode
+import dev.opentrack.app.domain.model.QuickPreset
 import dev.opentrack.app.domain.model.TimestampPrecision
 import dev.opentrack.app.domain.model.TrackerDefinition
 import dev.opentrack.app.domain.model.TrackerEntry
@@ -67,6 +68,48 @@ class TrackingActionsTest {
         assertThat(result).isInstanceOf(QuickAddResult.NeedsInput::class.java)
         assertThat(repository.entries.value).isEmpty()
     }
+
+    @Test
+    fun groupPlusAlwaysPromptsForNumericValuesEvenWhenFieldsAreOptional() = runTest {
+        val field = TrackerField(
+            id = "weight",
+            label = "Weight",
+            kind = FieldKind.VALUE,
+            unit = "kg",
+            required = false,
+        )
+        val tracker = TrackerDefinition(
+            name = "Gym progress",
+            kind = TrackerKind.GROUP,
+            fields = listOf(field),
+            quickAdd = QuickAddConfig(QuickAddMode.AUTO),
+        )
+        val repository = FakeRepository(listOf(tracker))
+
+        val result = TrackingActions(repository, clock).quickAdd(tracker.id)
+
+        assertThat(result).isInstanceOf(QuickAddResult.NeedsInput::class.java)
+        assertThat(repository.entries.value).isEmpty()
+    }
+
+    @Test
+    fun explicitlySelectedGroupPresetCanRecord() = runTest {
+        val field = TrackerField(id = "weight", label = "Weight", kind = FieldKind.VALUE, unit = "kg")
+        val preset = QuickPreset(id = "bench-80", label = "Bench 80 kg", values = mapOf(field.id to FieldValue.Decimal(80.0)))
+        val tracker = TrackerDefinition(
+            name = "Gym progress",
+            kind = TrackerKind.GROUP,
+            fields = listOf(field),
+            presets = listOf(preset),
+            quickAdd = QuickAddConfig(QuickAddMode.AUTO),
+        )
+        val repository = FakeRepository(listOf(tracker))
+
+        val result = TrackingActions(repository, clock).quickAdd(tracker.id, preset.id)
+
+        assertThat(result).isInstanceOf(QuickAddResult.Recorded::class.java)
+        assertThat(repository.entries.value.single().values[field.id]).isEqualTo(FieldValue.Decimal(80.0))
+    }
 }
 
 private class FakeRepository(initialTrackers: List<TrackerDefinition>) : TrackerRepository {
@@ -101,4 +144,3 @@ private class FakeRepository(initialTrackers: List<TrackerDefinition>) : Tracker
     override suspend fun deleteDashboard(dashboardId: String) = Unit
     override suspend fun replaceAll(snapshot: BackupSnapshot) = Unit
 }
-

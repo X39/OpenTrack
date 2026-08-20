@@ -28,6 +28,12 @@ class TrackingActions(
         val tracker = repository.getTracker(trackerId)
             ?: return QuickAddResult.MissingTracker(trackerId)
 
+        // A group represents a form, so its main + action must never create an empty event.
+        // A deliberately chosen preset can still bypass the editor.
+        if (tracker.kind == TrackerKind.GROUP && presetId == null) {
+            return QuickAddResult.NeedsInput(tracker)
+        }
+
         val resolvedPreset = (presetId ?: tracker.quickAdd.defaultPresetId)
             ?.let { id -> tracker.presets.firstOrNull { it.id == id } }
         val values = linkedMapOf<String, FieldValue>()

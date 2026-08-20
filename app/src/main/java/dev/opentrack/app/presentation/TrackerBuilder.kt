@@ -323,7 +323,9 @@ internal object TrackerBuilderLogic {
             fields = fields,
             presets = preset?.let(::listOf).orEmpty(),
             quickAdd = QuickAddConfig(
-                mode = if (kind in setOf(TrackerKind.TIMESTAMP, TrackerKind.COUNTER, TrackerKind.GROUP)) {
+                mode = if (kind == TrackerKind.GROUP) {
+                    QuickAddMode.OPEN_EDITOR
+                } else if (kind in setOf(TrackerKind.TIMESTAMP, TrackerKind.COUNTER)) {
                     QuickAddMode.AUTO
                 } else when (state.quickLogMode) {
                     QuickLogModeUi.SMART -> QuickAddMode.AUTO

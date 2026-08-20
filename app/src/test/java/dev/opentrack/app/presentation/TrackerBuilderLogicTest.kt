@@ -154,4 +154,15 @@ class TrackerBuilderLogicTest {
         assertThat(definition.timestampCalendar.range).isEqualTo(CalendarRange.TWELVE_WEEKS)
         assertThat(definition.colorArgb).isEqualTo(SignalPalette.Sky.value.toLong())
     }
+
+    @Test
+    fun `new groups open their value form from the plus action`() {
+        var state = TrackerBuilderLogic.initial()
+        state = TrackerBuilderLogic.reduce(state, TrackerBuilderAction.NameChanged("Gym progress"))
+        state = TrackerBuilderLogic.reduce(state, TrackerBuilderAction.KindSelected(TrackerKindUi.GROUP))
+
+        val definition = TrackerBuilderLogic.build(state)
+
+        assertThat(definition.quickAdd.mode).isEqualTo(QuickAddMode.OPEN_EDITOR)
+    }
 }
