@@ -2,6 +2,9 @@ package dev.opentrack.app.data.local
 
 import androidx.room.TypeConverter
 import dev.opentrack.app.domain.model.Aggregation
+import dev.opentrack.app.domain.model.CalendarSpan
+import dev.opentrack.app.domain.model.CalendarRange
+import dev.opentrack.app.domain.model.CalendarWeekStart
 import dev.opentrack.app.domain.model.AnalyticsMetric
 import dev.opentrack.app.domain.model.ChartStyle
 import dev.opentrack.app.domain.model.DashboardWidgetKind
@@ -16,6 +19,12 @@ import dev.opentrack.app.domain.model.TrackerKind
 import dev.opentrack.app.domain.model.WidgetSpan
 
 class OpenTrackConverters {
+    @TypeConverter fun calendarWeekStart(value: CalendarWeekStart?): String? = value?.name
+    @TypeConverter fun calendarWeekStart(value: String?): CalendarWeekStart? = value?.let(CalendarWeekStart::valueOf)
+    @TypeConverter fun calendarSpan(value: CalendarSpan?): String? = value?.name
+    @TypeConverter fun calendarSpan(value: String?): CalendarSpan? = value?.let(CalendarSpan::valueOf)
+    @TypeConverter fun calendarRange(value: CalendarRange?): String? = value?.name
+    @TypeConverter fun calendarRange(value: String?): CalendarRange? = value?.let(CalendarRange::valueOf)
     @TypeConverter fun trackerKind(value: TrackerKind?): String? = value?.name
     @TypeConverter fun trackerKind(value: String?): TrackerKind? = value?.let(TrackerKind::valueOf)
     @TypeConverter fun fieldKind(value: FieldKind?): String? = value?.name
@@ -43,4 +52,3 @@ class OpenTrackConverters {
     @TypeConverter fun aggregation(value: Aggregation?): String? = value?.name
     @TypeConverter fun aggregation(value: String?): Aggregation? = value?.let(Aggregation::valueOf)
 }
-

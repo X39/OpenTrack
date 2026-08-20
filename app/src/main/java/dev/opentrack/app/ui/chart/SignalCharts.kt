@@ -2,10 +2,12 @@ package dev.opentrack.app.ui.chart
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -43,7 +45,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
-import dev.opentrack.app.ui.model.CalendarDayUi
+import androidx.compose.ui.unit.sp
+import dev.opentrack.app.ui.model.CalendarGridUi
 import dev.opentrack.app.ui.model.ChartBarUi
 import dev.opentrack.app.ui.model.ChartPointUi
 import dev.opentrack.app.ui.model.DistributionPartUi
@@ -299,34 +302,74 @@ fun SignalDistributionBar(
 
 @Composable
 fun SignalCalendarHeatmap(
-    days: List<CalendarDayUi>,
+    grid: CalendarGridUi,
     summary: String,
     color: Color,
     modifier: Modifier = Modifier,
-    cellSize: Dp = 15.dp,
+    maxCellSize: Dp = 28.dp,
     gap: Dp = 5.dp,
 ) {
-    val weeks = remember(days) { days.chunked(7) }
-    Row(
-        modifier = modifier
-            .horizontalScroll(rememberScrollState(), reverseScrolling = true)
-            .semantics { contentDescription = summary },
-        horizontalArrangement = Arrangement.spacedBy(gap),
-    ) {
-        weeks.forEach { week ->
-            Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-                week.forEach { day ->
-                    Box(
-                        Modifier
-                            .size(cellSize)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(
-                                if (day.intensity <= 0f) MaterialTheme.colorScheme.surfaceVariant
-                                else color.copy(alpha = 0.18f + 0.82f * day.intensity.coerceIn(0f, 1f)),
-                            ),
-                    )
+    BoxWithConstraints(modifier.semantics { contentDescription = summary }) {
+        val availableCellSize = (maxWidth - gap * (grid.columns - 1)) / grid.columns
+        val cellSize = minOf(maxCellSize, availableCellSize.coerceAtLeast(12.dp))
+        val rows = remember(grid.days, grid.columns) { grid.days.chunked(grid.columns) }
+        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            if (grid.showWeekdayHeader) {
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    grid.weekdayLabels.forEach { label ->
+                        Box(Modifier.width(cellSize), contentAlignment = Alignment.Center) {
+                            Text(
+                                label,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 9.sp,
+                                lineHeight = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
+                    }
                 }
-                repeat(7 - week.size) { Spacer(Modifier.size(cellSize)) }
+            }
+            rows.forEach { row ->
+                Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    row.forEach { day ->
+                        val background = when {
+                            !day.visible -> Color.Transparent
+                            day.intensity <= 0f -> MaterialTheme.colorScheme.surfaceVariant
+                            else -> color.copy(alpha = 0.18f + 0.82f * day.intensity.coerceIn(0f, 1f))
+                        }
+                        Box(
+                            Modifier
+                                .size(cellSize)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(background)
+                                .then(
+                                    if (day.isToday) Modifier.border(1.5.dp, color, RoundedCornerShape(4.dp))
+                                    else Modifier
+                                )
+                                .semantics { contentDescription = day.contentDescription },
+                        ) {
+                            if (day.visible && grid.showDayNumber) {
+                                Text(
+                                    day.dayNumber,
+                                    modifier = Modifier.align(Alignment.TopStart).padding(start = 2.dp),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 8.sp,
+                                    lineHeight = 9.sp,
+                                )
+                            }
+                            if (day.visible && grid.showCount && day.count > 0) {
+                                Text(
+                                    day.count.toString(),
+                                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = 2.dp),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    fontSize = 8.sp,
+                                    lineHeight = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }

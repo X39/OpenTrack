@@ -4,6 +4,9 @@ import dev.opentrack.app.data.export.TrackerCsvExporter
 import dev.opentrack.app.domain.model.Aggregation
 import dev.opentrack.app.domain.model.AnalyticsMetric
 import dev.opentrack.app.domain.model.BackupSnapshot
+import dev.opentrack.app.domain.model.CalendarSpan
+import dev.opentrack.app.domain.model.CalendarRange
+import dev.opentrack.app.domain.model.CalendarWeekStart
 import dev.opentrack.app.domain.model.ChartStyle
 import dev.opentrack.app.domain.model.ChoiceOption
 import dev.opentrack.app.domain.model.Dashboard
@@ -21,6 +24,7 @@ import dev.opentrack.app.domain.model.RecordedAt
 import dev.opentrack.app.domain.model.TimeBucket
 import dev.opentrack.app.domain.model.TimeRangePreset
 import dev.opentrack.app.domain.model.TimestampPrecision
+import dev.opentrack.app.domain.model.TimestampCalendarConfig
 import dev.opentrack.app.domain.model.TimestampPresetMode
 import dev.opentrack.app.domain.model.TrackerDefinition
 import dev.opentrack.app.domain.model.TrackerEntry
@@ -59,7 +63,7 @@ class BackupValidationException(message: String, cause: Throwable? = null) : Exc
  * it deliberately never stores the Room database file.
  */
 object LogicalBackupCodec {
-    const val FORMAT_VERSION = 1
+    const val FORMAT_VERSION = 2
     private const val FORMAT = "opentrack-logical-backup"
     private const val MANIFEST = "manifest.json"
     private const val SNAPSHOT = "snapshot.bin"
@@ -127,12 +131,15 @@ object LogicalBackupCodec {
             val data = snapshotBytes ?: throw BackupValidationException("Backup has no logical snapshot")
             val metadata = parseManifest(manifestText)
             if (metadata.format != FORMAT) throw BackupValidationException("Not an OpenTrack backup")
-            if (metadata.version != FORMAT_VERSION) {
+            if (metadata.version !in 1..FORMAT_VERSION) {
                 throw BackupValidationException("Unsupported backup version ${metadata.version}")
             }
             if (sha256(data) != metadata.sha256) throw BackupValidationException("Backup checksum does not match")
 
-            val snapshot = SnapshotReader(DataInputStream(ByteArrayInputStream(data))).read()
+            val snapshot = SnapshotReader(
+                DataInputStream(ByteArrayInputStream(data)),
+                metadata.version,
+            ).read()
             DomainValidator.validate(snapshot)
             if (snapshot.trackers.size != metadata.trackerCount || snapshot.entries.size != metadata.entryCount) {
                 throw BackupValidationException("Backup counts do not match its manifest")
@@ -245,6 +252,13 @@ object LogicalBackupCodec {
             output.writeLong(value.createdAt.toEpochMilli()); output.writeLong(value.updatedAt.toEpochMilli())
             list(value.fields, ::field); list(value.presets, ::preset)
             enum(value.quickAdd.mode); nullableString(value.quickAdd.defaultPresetId)
+            output.writeBoolean(value.timestampCalendar.showDayNumber)
+            output.writeBoolean(value.timestampCalendar.showCount)
+            output.writeBoolean(value.timestampCalendar.showWeekdayHeader)
+            enum(value.timestampCalendar.weekStart)
+            enum(value.timestampCalendar.span)
+            enum(value.timestampCalendar.range)
+            output.writeBoolean(value.timestampCalendar.showEmptyDays)
         }
 
         private fun field(value: TrackerField) {
@@ -326,10 +340,17 @@ object LogicalBackupCodec {
         }
     }
 
-    private class SnapshotReader(private val input: DataInputStream) {
+    private class SnapshotReader(
+        private val input: DataInputStream,
+        private val expectedVersion: Int,
+    ) {
+        private var version: Int = 0
+
         fun read(): BackupSnapshot {
             if (string() != MAGIC) throw BackupValidationException("Logical snapshot header is invalid")
-            if (input.readInt() != FORMAT_VERSION) throw BackupValidationException("Logical snapshot version is unsupported")
+            version = input.readInt()
+            if (version !in 1..FORMAT_VERSION) throw BackupValidationException("Logical snapshot version is unsupported")
+            if (version != expectedVersion) throw BackupValidationException("Backup versions do not match")
             val createdAt = Instant.ofEpochMilli(input.readLong())
             val trackers = list(::tracker)
             val entries = list(::entry)
@@ -355,6 +376,17 @@ object LogicalBackupCodec {
             val presets = list(::preset)
             val quickAddMode = enum<QuickAddMode>()
             val defaultPresetId = nullableString()
+            val timestampCalendar = if (version >= 2) {
+                TimestampCalendarConfig(
+                    showDayNumber = input.readBoolean(),
+                    showCount = input.readBoolean(),
+                    showWeekdayHeader = input.readBoolean(),
+                    weekStart = enum<CalendarWeekStart>(),
+                    span = enum<CalendarSpan>(),
+                    range = enum<CalendarRange>(),
+                    showEmptyDays = input.readBoolean(),
+                )
+            } else TimestampCalendarConfig()
             return TrackerDefinition(
                 id = id,
                 name = name,
@@ -363,6 +395,7 @@ object LogicalBackupCodec {
                 timestampPrecision = timestampPrecision,
                 iconKey = iconKey,
                 colorArgb = colorArgb,
+                timestampCalendar = timestampCalendar,
                 order = order,
                 fields = fields,
                 presets = presets,

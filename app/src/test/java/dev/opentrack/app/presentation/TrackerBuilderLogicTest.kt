@@ -2,6 +2,9 @@ package dev.opentrack.app.presentation
 
 import com.google.common.truth.Truth.assertThat
 import dev.opentrack.app.domain.model.FieldKind
+import dev.opentrack.app.domain.model.CalendarRange
+import dev.opentrack.app.domain.model.CalendarSpan
+import dev.opentrack.app.domain.model.CalendarWeekStart
 import dev.opentrack.app.domain.model.FieldValue
 import dev.opentrack.app.domain.model.QuickAddMode
 import dev.opentrack.app.domain.model.TrackerDefinition
@@ -9,8 +12,12 @@ import dev.opentrack.app.domain.model.TrackerField
 import dev.opentrack.app.domain.model.TrackerKind
 import dev.opentrack.app.domain.template.StarterTemplates
 import dev.opentrack.app.ui.model.QuickLogModeUi
+import dev.opentrack.app.ui.model.CalendarRangeUi
+import dev.opentrack.app.ui.model.CalendarSpanUi
+import dev.opentrack.app.ui.model.CalendarWeekStartUi
 import dev.opentrack.app.ui.model.TrackerBuilderAction
 import dev.opentrack.app.ui.model.TrackerKindUi
+import dev.opentrack.app.ui.theme.SignalPalette
 import java.time.Duration
 import java.time.Clock
 import java.time.Instant
@@ -126,5 +133,25 @@ class TrackerBuilderLogicTest {
 
         assertThat(metric.fields.single().options.first().payloadUnit).isEqualTo("kg")
         assertThat(imperial.fields.single().options.first().payloadUnit).isEqualTo("lb")
+    }
+
+    @Test
+    fun `timestamp builder persists calendar presentation choices`() {
+        var state = TrackerBuilderLogic.fromTemplate(StarterTemplates.MOMENT, clock = clock)
+        state = TrackerBuilderLogic.reduce(state, TrackerBuilderAction.CalendarShowDayNumberChanged(false))
+        state = TrackerBuilderLogic.reduce(state, TrackerBuilderAction.CalendarShowCountChanged(true))
+        state = TrackerBuilderLogic.reduce(state, TrackerBuilderAction.CalendarWeekStartChanged(CalendarWeekStartUi.SUNDAY))
+        state = TrackerBuilderLogic.reduce(state, TrackerBuilderAction.CalendarSpanChanged(CalendarSpanUi.ONE_WEEK))
+        state = TrackerBuilderLogic.reduce(state, TrackerBuilderAction.CalendarRangeChanged(CalendarRangeUi.TWELVE_WEEKS))
+        state = TrackerBuilderLogic.reduce(state, TrackerBuilderAction.AccentSelected(SignalPalette.Sky))
+
+        val definition = TrackerBuilderLogic.build(state)
+
+        assertThat(definition.timestampCalendar.showDayNumber).isFalse()
+        assertThat(definition.timestampCalendar.showCount).isTrue()
+        assertThat(definition.timestampCalendar.weekStart).isEqualTo(CalendarWeekStart.SUNDAY)
+        assertThat(definition.timestampCalendar.span).isEqualTo(CalendarSpan.ONE_WEEK)
+        assertThat(definition.timestampCalendar.range).isEqualTo(CalendarRange.TWELVE_WEEKS)
+        assertThat(definition.colorArgb).isEqualTo(SignalPalette.Sky.value.toLong())
     }
 }

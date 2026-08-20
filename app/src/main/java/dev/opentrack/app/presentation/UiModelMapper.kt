@@ -4,6 +4,9 @@ import androidx.compose.ui.graphics.Color
 import dev.opentrack.app.domain.model.Aggregation
 import dev.opentrack.app.domain.model.AnalyticsMetric
 import dev.opentrack.app.domain.model.ChartStyle
+import dev.opentrack.app.domain.model.CalendarSpan
+import dev.opentrack.app.domain.model.CalendarRange
+import dev.opentrack.app.domain.model.CalendarWeekStart
 import dev.opentrack.app.domain.model.Dashboard
 import dev.opentrack.app.domain.model.DashboardSeries
 import dev.opentrack.app.domain.model.DashboardWidget
@@ -15,10 +18,12 @@ import dev.opentrack.app.domain.model.TimeBucket
 import dev.opentrack.app.domain.model.TrackerDefinition
 import dev.opentrack.app.domain.model.TrackerEntry
 import dev.opentrack.app.domain.model.TrackerKind
+import dev.opentrack.app.domain.model.TimestampCalendarConfig
 import dev.opentrack.app.domain.model.WidgetSpan
 import dev.opentrack.app.preferences.ThemeMode
 import dev.opentrack.app.preferences.UserPreferences
 import dev.opentrack.app.ui.model.CalendarDayUi
+import dev.opentrack.app.ui.model.CalendarGridUi
 import dev.opentrack.app.ui.model.ChartBarUi
 import dev.opentrack.app.ui.model.ChartPointUi
 import dev.opentrack.app.ui.model.DashboardEditorItemUi
@@ -41,6 +46,7 @@ import dev.opentrack.app.ui.model.WidgetSizeUi
 import dev.opentrack.app.ui.theme.SignalPalette
 import java.time.Clock
 import java.time.LocalDate
+import java.time.DayOfWeek
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.math.roundToInt
@@ -121,6 +127,7 @@ internal object UiModelMapper {
         entries: List<TrackerEntry>,
         dashboards: List<Dashboard>,
         clock: Clock,
+        weekStartsMonday: Boolean = true,
     ): DashboardUiState {
         val today = LocalDate.now(clock)
         val definitionsById = definitions.associateBy { it.id }
@@ -131,7 +138,7 @@ internal object UiModelMapper {
             .mapNotNull { widget ->
                 val tracker = widget.series.firstNotNullOfOrNull { definitionsById[it.trackerId] }
                     ?: return@mapNotNull null
-                widget.toUi(tracker, entries.filter { it.trackerId == tracker.id }, today)
+                widget.toUi(tracker, entries.filter { it.trackerId == tracker.id }, today, weekStartsMonday)
             }
         val widgets = if (dashboards.isNotEmpty()) configured else definitions
             .filter { it.archivedAt == null }
@@ -139,7 +146,7 @@ internal object UiModelMapper {
             .take(6)
             .map { tracker ->
                 val trackerEntries = entries.filter { it.trackerId == tracker.id }
-                derivedWidget(tracker, trackerEntries, today)
+                derivedWidget(tracker, trackerEntries, today, weekStartsMonday)
             }
         return DashboardUiState(
             dateLabel = today.format(DateTimeFormatter.ofPattern("EEEE, MMMM d")),
@@ -153,6 +160,7 @@ internal object UiModelMapper {
         entries: List<TrackerEntry>,
         dashboards: List<Dashboard>,
         clock: Clock,
+        weekStartsMonday: Boolean = true,
     ): DashboardEditorUiState {
         val today = LocalDate.now(clock)
         val definitionsById = definitions.associateBy { it.id }
@@ -161,7 +169,7 @@ internal object UiModelMapper {
                 val tracker = widget.series.firstNotNullOfOrNull { definitionsById[it.trackerId] }
                     ?: return@mapNotNull null
                 DashboardEditorItemUi(
-                    widget = widget.toUi(tracker, entries.filter { it.trackerId == tracker.id }, today),
+                    widget = widget.toUi(tracker, entries.filter { it.trackerId == tracker.id }, today, weekStartsMonday),
                     visible = widget.visible,
                 )
             },
@@ -175,6 +183,7 @@ internal object UiModelMapper {
         tab: dev.opentrack.app.ui.model.DetailTabUi,
         range: DateRangeUi,
         clock: Clock,
+        weekStartsMonday: Boolean = true,
     ): TrackerDetailUiState {
         val today = LocalDate.now(clock)
         val entries = filterRange(allEntries.filter { it.trackerId == definition.id }, range, today)
@@ -182,7 +191,7 @@ internal object UiModelMapper {
         val latest = entries.lastOrNull()
         val summary = trackerSummaries(listOf(definition), allEntries, true, clock).single()
         val numeric = entries.mapNotNull { it.numericValue(definition) }
-        val charts = detailCharts(definition, entries, today)
+        val charts = detailCharts(definition, entries, today, weekStartsMonday)
         val insights = buildList {
             add(InsightUi("Entries", entries.size.toString()))
             if (numeric.isNotEmpty()) {
@@ -234,6 +243,7 @@ internal object UiModelMapper {
         tracker: TrackerDefinition,
         entries: List<TrackerEntry>,
         today: LocalDate,
+        weekStartsMonday: Boolean,
     ): DashboardWidgetUi {
         val ranged = filterRange(entries, range.toUi(), today).sortedWith(recordedEntryComparator)
         val latest = ranged.lastOrNull()
@@ -252,7 +262,10 @@ internal object UiModelMapper {
                 AnalyticsMetric.LAST_RECORDED -> "${ranged.size} ${if (ranged.size == 1) "entry" else "entries"}"
                 else -> latest?.recordedAt?.fullLabel(today) ?: "No entries yet"
             },
-            chart = configured.chart(chartStyle, bucket, field, ranged, values, today),
+            chart = configured.chart(
+                chartStyle, bucket, field, ranged, values, today,
+                tracker.timestampCalendar, weekStartsMonday,
+            ),
             size = if (span == WidgetSpan.WIDE) WidgetSizeUi.WIDE else WidgetSizeUi.COMPACT,
         )
     }
@@ -343,6 +356,8 @@ internal object UiModelMapper {
         entries: List<TrackerEntry>,
         sourceValues: List<SeriesValue>,
         today: LocalDate,
+        calendarConfig: TimestampCalendarConfig,
+        weekStartsMonday: Boolean,
     ): WidgetChartUi {
         if (entries.isEmpty()) return WidgetChartUi.None
         val resolvedStyle = if (style != ChartStyle.AUTO) style else when (metric) {
@@ -351,7 +366,10 @@ internal object UiModelMapper {
             else -> ChartStyle.LINE
         }
         if (resolvedStyle == ChartStyle.CALENDAR) {
-            return WidgetChartUi.Calendar(calendar(entries, today), "${entries.size} entries")
+            return WidgetChartUi.Calendar(
+                calendar(entries, today, calendarConfig, weekStartsMonday),
+                "${entries.size} entries",
+            )
         }
         if (resolvedStyle == ChartStyle.DISTRIBUTION) {
             val parts = field?.let { distribution(it, entries) }.orEmpty()
@@ -405,6 +423,7 @@ internal object UiModelMapper {
         tracker: TrackerDefinition,
         entries: List<TrackerEntry>,
         today: LocalDate,
+        weekStartsMonday: Boolean,
     ) = DashboardWidgetUi(
         id = "derived-${tracker.id}",
         trackerId = tracker.id,
@@ -413,7 +432,7 @@ internal object UiModelMapper {
         accent = tracker.accentUi(),
         metric = widgetMetric(tracker, entries),
             context = entries.maxWithOrNull(recordedEntryComparator)?.recordedAt?.fullLabel(today) ?: "No entries yet",
-            chart = chart(tracker, entries.sortedWith(recordedEntryComparator), today),
+            chart = chart(tracker, entries.sortedWith(recordedEntryComparator), today, weekStartsMonday),
     )
 
     private fun widgetMetric(tracker: TrackerDefinition, entries: List<TrackerEntry>): String {
@@ -432,6 +451,7 @@ internal object UiModelMapper {
         tracker: TrackerDefinition,
         entries: List<TrackerEntry>,
         today: LocalDate,
+        weekStartsMonday: Boolean,
     ): WidgetChartUi = when (tracker.kind) {
         TrackerKind.VALUE, TrackerKind.COUNTER, TrackerKind.DURATION -> {
             val points = numericPoints(tracker, entries)
@@ -448,8 +468,8 @@ internal object UiModelMapper {
             )
         }
         TrackerKind.TIMESTAMP, TrackerKind.GROUP -> {
-            val days = calendar(entries, today)
-            if (entries.isEmpty()) WidgetChartUi.None else WidgetChartUi.Calendar(days, "${entries.size} entries")
+            val grid = calendar(entries, today, tracker.timestampCalendar, weekStartsMonday)
+            if (entries.isEmpty()) WidgetChartUi.None else WidgetChartUi.Calendar(grid, "${entries.size} entries")
         }
     }
 
@@ -457,6 +477,7 @@ internal object UiModelMapper {
         tracker: TrackerDefinition,
         entries: List<TrackerEntry>,
         today: LocalDate,
+        weekStartsMonday: Boolean,
     ): List<DetailChartUi> = when (tracker.kind) {
         TrackerKind.VALUE, TrackerKind.COUNTER, TrackerKind.DURATION -> {
             val points = numericPoints(tracker, entries)
@@ -477,18 +498,29 @@ internal object UiModelMapper {
             )
         }
         TrackerKind.TIMESTAMP -> if (entries.isEmpty()) emptyList() else listOf(
-            DetailChartUi.Calendar("Activity", "${entries.size} entries", calendar(entries, today)),
+            DetailChartUi.Calendar(
+                "Activity",
+                "${entries.size} entries",
+                calendar(entries, today, tracker.timestampCalendar, weekStartsMonday),
+            ),
         )
-        TrackerKind.GROUP -> groupDetailCharts(tracker, entries, today)
+        TrackerKind.GROUP -> groupDetailCharts(tracker, entries, today, weekStartsMonday)
     }
 
     private fun groupDetailCharts(
         tracker: TrackerDefinition,
         entries: List<TrackerEntry>,
         today: LocalDate,
+        weekStartsMonday: Boolean,
     ): List<DetailChartUi> = buildList {
         if (entries.isNotEmpty()) {
-            add(DetailChartUi.Calendar("Activity", "${entries.size} entries", calendar(entries, today)))
+            add(
+                DetailChartUi.Calendar(
+                    "Activity",
+                    "${entries.size} entries",
+                    calendar(entries, today, TimestampCalendarConfig(), weekStartsMonday),
+                ),
+            )
         }
         tracker.fields.asSequence()
             .filter { it.archivedAt == null }
@@ -535,7 +567,7 @@ internal object UiModelMapper {
                                 DetailChartUi.Calendar(
                                     title = "${field.label} activity",
                                     summary = "${dates.size} ${if (dates.size == 1) "timestamp" else "timestamps"}",
-                                    days = calendarDates(dates, today),
+                                    grid = calendarDates(dates, today, TimestampCalendarConfig(), weekStartsMonday),
                                 ),
                             )
                         }
@@ -615,22 +647,65 @@ internal object UiModelMapper {
         }
     }
 
-    private fun calendar(entries: List<TrackerEntry>, today: LocalDate): List<CalendarDayUi> {
-        return calendarDates(entries.map { it.recordedAt.localDate }, today)
+    private fun calendar(
+        entries: List<TrackerEntry>,
+        today: LocalDate,
+        config: TimestampCalendarConfig,
+        weekStartsMonday: Boolean,
+    ): CalendarGridUi {
+        return calendarDates(entries.map { it.recordedAt.localDate }, today, config, weekStartsMonday)
     }
 
-    private fun calendarDates(dates: List<LocalDate>, today: LocalDate): List<CalendarDayUi> {
+    private fun calendarDates(
+        dates: List<LocalDate>,
+        today: LocalDate,
+        config: TimestampCalendarConfig,
+        weekStartsMonday: Boolean,
+    ): CalendarGridUi {
         val counts = dates.groupingBy { it }.eachCount()
         val max = counts.values.maxOrNull()?.coerceAtLeast(1) ?: 1
-        return (83 downTo 0).map { offset ->
-            val date = today.minusDays(offset.toLong())
+        val firstDay = when (config.weekStart) {
+            CalendarWeekStart.APP_DEFAULT -> if (weekStartsMonday) DayOfWeek.MONDAY else DayOfWeek.SUNDAY
+            CalendarWeekStart.MONDAY -> DayOfWeek.MONDAY
+            CalendarWeekStart.SUNDAY -> DayOfWeek.SUNDAY
+        }
+        val columns = if (config.span == CalendarSpan.TWO_WEEKS) 14 else 7
+        val daysUntilWeekEnd = Math.floorMod(
+            firstDay.value + 6 - today.dayOfWeek.value,
+            7,
+        )
+        val totalDays = when (config.range) {
+            CalendarRange.FOUR_WEEKS -> 28
+            CalendarRange.SIX_WEEKS -> 42
+            CalendarRange.TWELVE_WEEKS -> 84
+        }
+        val lastDate = today.plusDays(daysUntilWeekEnd.toLong())
+        val firstDate = lastDate.minusDays((totalDays - 1).toLong())
+        val days = (0L until totalDays.toLong()).map { offset ->
+            val date = firstDate.plusDays(offset)
             val count = counts[date] ?: 0
             CalendarDayUi(
                 key = date.toString(),
+                dayNumber = date.dayOfMonth.toString(),
+                count = count,
+                isToday = date == today,
+                visible = config.showEmptyDays || count > 0,
                 intensity = count.toFloat() / max,
                 contentDescription = "$date: $count ${if (count == 1) "entry" else "entries"}",
             )
         }
+        val weekdayLabels = (0 until columns).map { offset ->
+            DayOfWeek.of(((firstDay.value - 1 + offset) % 7) + 1)
+                .getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.getDefault())
+        }
+        return CalendarGridUi(
+            days = days,
+            weekdayLabels = weekdayLabels,
+            columns = columns,
+            showDayNumber = config.showDayNumber,
+            showCount = config.showCount,
+            showWeekdayHeader = config.showWeekdayHeader,
+        )
     }
 
     private fun filterRange(

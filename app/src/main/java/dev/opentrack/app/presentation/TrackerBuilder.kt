@@ -1,6 +1,9 @@
 package dev.opentrack.app.presentation
 
 import dev.opentrack.app.domain.model.ChoiceOption
+import dev.opentrack.app.domain.model.CalendarSpan
+import dev.opentrack.app.domain.model.CalendarRange
+import dev.opentrack.app.domain.model.CalendarWeekStart
 import dev.opentrack.app.domain.model.DomainValidator
 import dev.opentrack.app.domain.model.EnumPayloadKind
 import dev.opentrack.app.domain.model.FieldKind
@@ -9,11 +12,15 @@ import dev.opentrack.app.domain.model.QuickAddConfig
 import dev.opentrack.app.domain.model.QuickAddMode
 import dev.opentrack.app.domain.model.QuickPreset
 import dev.opentrack.app.domain.model.TimestampPrecision
+import dev.opentrack.app.domain.model.TimestampCalendarConfig
 import dev.opentrack.app.domain.model.TrackerDefinition
 import dev.opentrack.app.domain.model.TrackerField
 import dev.opentrack.app.domain.model.TrackerKind
 import dev.opentrack.app.domain.model.newId
 import dev.opentrack.app.ui.model.BuilderFieldKindUi
+import dev.opentrack.app.ui.model.CalendarSpanUi
+import dev.opentrack.app.ui.model.CalendarRangeUi
+import dev.opentrack.app.ui.model.CalendarWeekStartUi
 import dev.opentrack.app.ui.model.BuilderFieldUi
 import dev.opentrack.app.ui.model.BuilderOptionUi
 import dev.opentrack.app.ui.model.BuilderPayloadKindUi
@@ -66,6 +73,13 @@ internal object TrackerBuilderLogic {
                 glyph = existing.glyphUi(),
                 accent = existing.accentUi(),
                 precision = existing.timestampPrecision.toUi(),
+                calendarShowDayNumber = existing.timestampCalendar.showDayNumber,
+                calendarShowCount = existing.timestampCalendar.showCount,
+                calendarShowWeekdayHeader = existing.timestampCalendar.showWeekdayHeader,
+                calendarWeekStart = existing.timestampCalendar.weekStart.toUi(),
+                calendarSpan = existing.timestampCalendar.span.toUi(),
+                calendarRange = existing.timestampCalendar.range.toUi(),
+                calendarShowEmptyDays = existing.timestampCalendar.showEmptyDays,
                 unit = primary?.unit.orEmpty(),
                 options = primary?.options.orEmpty().filter { it.archivedAt == null }
                     .map { it.toUi(payloadKindLocked = editing) },
@@ -115,6 +129,14 @@ internal object TrackerBuilderLogic {
                 withDefaults(state.copy(kind = action.kind, selectedTemplateId = null, errorMessage = null))
             } else state
             is TrackerBuilderAction.PrecisionSelected -> state.copy(precision = action.precision)
+            is TrackerBuilderAction.AccentSelected -> state.copy(accent = action.accent)
+            is TrackerBuilderAction.CalendarShowDayNumberChanged -> state.copy(calendarShowDayNumber = action.value)
+            is TrackerBuilderAction.CalendarShowCountChanged -> state.copy(calendarShowCount = action.value)
+            is TrackerBuilderAction.CalendarShowWeekdayHeaderChanged -> state.copy(calendarShowWeekdayHeader = action.value)
+            is TrackerBuilderAction.CalendarWeekStartChanged -> state.copy(calendarWeekStart = action.value)
+            is TrackerBuilderAction.CalendarSpanChanged -> state.copy(calendarSpan = action.value)
+            is TrackerBuilderAction.CalendarRangeChanged -> state.copy(calendarRange = action.value)
+            is TrackerBuilderAction.CalendarShowEmptyDaysChanged -> state.copy(calendarShowEmptyDays = action.value)
             is TrackerBuilderAction.UnitChanged -> if (state.editingTrackerId == null) {
                 state.copy(unit = action.value)
             } else state
@@ -288,6 +310,15 @@ internal object TrackerBuilderLogic {
             timestampPrecision = precision,
             iconKey = state.glyph.name,
             colorArgb = state.accent.value.toLong(),
+            timestampCalendar = TimestampCalendarConfig(
+                showDayNumber = state.calendarShowDayNumber,
+                showCount = state.calendarShowCount,
+                showWeekdayHeader = state.calendarShowWeekdayHeader,
+                weekStart = state.calendarWeekStart.toDomain(),
+                span = state.calendarSpan.toDomain(),
+                range = state.calendarRange.toDomain(),
+                showEmptyDays = state.calendarShowEmptyDays,
+            ),
             order = existing?.order ?: 0,
             fields = fields,
             presets = preset?.let(::listOf).orEmpty(),
@@ -477,6 +508,40 @@ internal object TrackerBuilderLogic {
     private fun TimestampPrecisionUi.toDomain() = when (this) {
         TimestampPrecisionUi.DAY -> TimestampPrecision.DAY
         TimestampPrecisionUi.DATE_AND_TIME -> TimestampPrecision.DATE_TIME
+    }
+
+    private fun CalendarWeekStart.toUi() = when (this) {
+        CalendarWeekStart.APP_DEFAULT -> CalendarWeekStartUi.APP_DEFAULT
+        CalendarWeekStart.MONDAY -> CalendarWeekStartUi.MONDAY
+        CalendarWeekStart.SUNDAY -> CalendarWeekStartUi.SUNDAY
+    }
+
+    private fun CalendarWeekStartUi.toDomain() = when (this) {
+        CalendarWeekStartUi.APP_DEFAULT -> CalendarWeekStart.APP_DEFAULT
+        CalendarWeekStartUi.MONDAY -> CalendarWeekStart.MONDAY
+        CalendarWeekStartUi.SUNDAY -> CalendarWeekStart.SUNDAY
+    }
+
+    private fun CalendarSpan.toUi() = when (this) {
+        CalendarSpan.ONE_WEEK -> CalendarSpanUi.ONE_WEEK
+        CalendarSpan.TWO_WEEKS -> CalendarSpanUi.TWO_WEEKS
+    }
+
+    private fun CalendarSpanUi.toDomain() = when (this) {
+        CalendarSpanUi.ONE_WEEK -> CalendarSpan.ONE_WEEK
+        CalendarSpanUi.TWO_WEEKS -> CalendarSpan.TWO_WEEKS
+    }
+
+    private fun CalendarRange.toUi() = when (this) {
+        CalendarRange.FOUR_WEEKS -> CalendarRangeUi.FOUR_WEEKS
+        CalendarRange.SIX_WEEKS -> CalendarRangeUi.SIX_WEEKS
+        CalendarRange.TWELVE_WEEKS -> CalendarRangeUi.TWELVE_WEEKS
+    }
+
+    private fun CalendarRangeUi.toDomain() = when (this) {
+        CalendarRangeUi.FOUR_WEEKS -> CalendarRange.FOUR_WEEKS
+        CalendarRangeUi.SIX_WEEKS -> CalendarRange.SIX_WEEKS
+        CalendarRangeUi.TWELVE_WEEKS -> CalendarRange.TWELVE_WEEKS
     }
 
     private fun QuickAddMode.toUi() = when (this) {

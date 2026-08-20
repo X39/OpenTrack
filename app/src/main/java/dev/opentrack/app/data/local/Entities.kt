@@ -5,6 +5,9 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import dev.opentrack.app.domain.model.Aggregation
+import dev.opentrack.app.domain.model.CalendarSpan
+import dev.opentrack.app.domain.model.CalendarRange
+import dev.opentrack.app.domain.model.CalendarWeekStart
 import dev.opentrack.app.domain.model.AnalyticsMetric
 import dev.opentrack.app.domain.model.ChartStyle
 import dev.opentrack.app.domain.model.DashboardWidgetKind
@@ -30,6 +33,13 @@ data class TrackerEntity(
     val timestampPrecision: TimestampPrecision,
     val iconKey: String?,
     val colorArgb: Long?,
+    @androidx.room.ColumnInfo(defaultValue = "1") val calendarShowDayNumber: Boolean,
+    @androidx.room.ColumnInfo(defaultValue = "1") val calendarShowCount: Boolean,
+    @androidx.room.ColumnInfo(defaultValue = "1") val calendarShowWeekdayHeader: Boolean,
+    @androidx.room.ColumnInfo(defaultValue = "'APP_DEFAULT'") val calendarWeekStart: CalendarWeekStart,
+    @androidx.room.ColumnInfo(defaultValue = "'TWO_WEEKS'") val calendarSpan: CalendarSpan,
+    @androidx.room.ColumnInfo(defaultValue = "'SIX_WEEKS'") val calendarRange: CalendarRange,
+    @androidx.room.ColumnInfo(defaultValue = "1") val calendarShowEmptyDays: Boolean,
     val position: Int,
     val archivedAtMillis: Long?,
     val createdAtMillis: Long,

@@ -13,6 +13,7 @@ import dev.opentrack.app.data.local.StoredValueColumns
 import dev.opentrack.app.data.local.TrackerEntity
 import dev.opentrack.app.data.local.TrackerFieldEntity
 import dev.opentrack.app.domain.model.ChoiceOption
+import dev.opentrack.app.domain.model.TimestampCalendarConfig
 import dev.opentrack.app.domain.model.Dashboard
 import dev.opentrack.app.domain.model.DashboardSeries
 import dev.opentrack.app.domain.model.DashboardWidget
@@ -40,6 +41,13 @@ internal fun TrackerDefinition.toEntity() = TrackerEntity(
     timestampPrecision = timestampPrecision,
     iconKey = iconKey,
     colorArgb = colorArgb,
+    calendarShowDayNumber = timestampCalendar.showDayNumber,
+    calendarShowCount = timestampCalendar.showCount,
+    calendarShowWeekdayHeader = timestampCalendar.showWeekdayHeader,
+    calendarWeekStart = timestampCalendar.weekStart,
+    calendarSpan = timestampCalendar.span,
+    calendarRange = timestampCalendar.range,
+    calendarShowEmptyDays = timestampCalendar.showEmptyDays,
     position = order,
     archivedAtMillis = archivedAt?.toEpochMilli(),
     createdAtMillis = createdAt.toEpochMilli(),
@@ -158,6 +166,15 @@ internal fun assembleDefinitions(
             timestampPrecision = tracker.timestampPrecision,
             iconKey = tracker.iconKey,
             colorArgb = tracker.colorArgb,
+            timestampCalendar = TimestampCalendarConfig(
+                showDayNumber = tracker.calendarShowDayNumber,
+                showCount = tracker.calendarShowCount,
+                showWeekdayHeader = tracker.calendarShowWeekdayHeader,
+                weekStart = tracker.calendarWeekStart,
+                span = tracker.calendarSpan,
+                range = tracker.calendarRange,
+                showEmptyDays = tracker.calendarShowEmptyDays,
+            ),
             order = tracker.position,
             fields = domainFields,
             presets = domainPresets,

@@ -2,9 +2,13 @@ package dev.opentrack.app.data.backup
 
 import com.google.common.truth.Truth.assertThat
 import dev.opentrack.app.domain.model.BackupSnapshot
+import dev.opentrack.app.domain.model.CalendarRange
+import dev.opentrack.app.domain.model.CalendarSpan
+import dev.opentrack.app.domain.model.CalendarWeekStart
 import dev.opentrack.app.domain.model.FieldValue
 import dev.opentrack.app.domain.model.RecordedAt
 import dev.opentrack.app.domain.model.TrackerEntry
+import dev.opentrack.app.domain.model.TimestampCalendarConfig
 import dev.opentrack.app.domain.template.StarterTemplates
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -23,6 +27,15 @@ class LogicalBackupCodecTest {
         val definition = StarterTemplates.instantiate(
             StarterTemplates.WEIGHT,
             clock = Clock.fixed(instant, ZoneOffset.UTC),
+        ).copy(
+            timestampCalendar = TimestampCalendarConfig(
+                showDayNumber = false,
+                showCount = true,
+                weekStart = CalendarWeekStart.SUNDAY,
+                span = CalendarSpan.ONE_WEEK,
+                range = CalendarRange.TWELVE_WEEKS,
+                showEmptyDays = false,
+            ),
         )
         val field = definition.fields.single()
         val entry = TrackerEntry(

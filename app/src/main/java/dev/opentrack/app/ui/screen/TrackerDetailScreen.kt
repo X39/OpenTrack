@@ -195,7 +195,7 @@ private fun DetailChartCard(chart: DetailChartUi, accent: androidx.compose.ui.gr
                 is DetailChartUi.Line -> SignalLineChart(chart.points, chart.summary, accent, chart.startLabel, chart.endLabel, Modifier.fillMaxWidth())
                 is DetailChartUi.Bars -> SignalBarChart(chart.bars, chart.summary, accent, Modifier.fillMaxWidth())
                 is DetailChartUi.Distribution -> SignalDistributionBar(chart.parts, chart.summary, Modifier.fillMaxWidth())
-                is DetailChartUi.Calendar -> SignalCalendarHeatmap(chart.days, chart.summary, accent, Modifier.fillMaxWidth())
+                is DetailChartUi.Calendar -> SignalCalendarHeatmap(chart.grid, chart.summary, accent, Modifier.fillMaxWidth())
             }
         }
     }

@@ -90,7 +90,10 @@ class OpenTrackViewModel(
         }
         val detail = (local.destination as? AppDestination.TrackerDetail)?.trackerId?.let { id ->
             snapshot.trackers.firstOrNull { it.id == id }?.let { tracker ->
-                UiModelMapper.detail(tracker, snapshot.entries, local.detailTab, local.detailRange, clock)
+                UiModelMapper.detail(
+                    tracker, snapshot.entries, local.detailTab, local.detailRange, clock,
+                    userPreferences.weekStartsMonday,
+                )
             }
         }
         val settings = UiModelMapper.settings(userPreferences).copy(
@@ -106,7 +109,10 @@ class OpenTrackViewModel(
             onboardingRequired = !userPreferences.onboardingComplete,
             preferences = userPreferences,
             destination = local.destination,
-            dashboard = UiModelMapper.dashboard(snapshot.trackers, snapshot.entries, snapshot.dashboards, clock),
+            dashboard = UiModelMapper.dashboard(
+                snapshot.trackers, snapshot.entries, snapshot.dashboards, clock,
+                userPreferences.weekStartsMonday,
+            ),
             trackers = summaries,
             history = UiModelMapper.history(
                 snapshot.trackers,
@@ -122,6 +128,7 @@ class OpenTrackViewModel(
                 snapshot.entries,
                 snapshot.dashboards,
                 clock,
+                userPreferences.weekStartsMonday,
             ),
             builder = local.builder,
             quickLog = local.quickLog?.ui,

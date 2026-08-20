@@ -123,11 +123,11 @@ private fun WidgetChart(chart: WidgetChartUi, accent: Color, compact: Boolean) {
             showLegend = false,
         )
         is WidgetChartUi.Calendar -> SignalCalendarHeatmap(
-            days = chart.days,
+            grid = chart.grid,
             summary = chart.summary,
             color = accent,
             modifier = Modifier.fillMaxWidth(),
-            cellSize = 7.dp,
+            maxCellSize = if (compact) 16.dp else 22.dp,
             gap = 2.dp,
         )
     }

@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import androidx.room.TypeConverters
 
 @Database(
@@ -20,7 +22,7 @@ import androidx.room.TypeConverters
         DashboardWidgetEntity::class,
         DashboardSeriesEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 @TypeConverters(OpenTrackConverters::class)
@@ -35,12 +37,24 @@ abstract class OpenTrackDatabase : RoomDatabase() {
                 context.applicationContext,
                 OpenTrackDatabase::class.java,
                 "opentrack.db",
-            ).build().also { instance = it }
+            ).addMigrations(MIGRATION_1_2).build().also { instance = it }
         }
 
         fun inMemory(context: Context): OpenTrackDatabase = Room.inMemoryDatabaseBuilder(
             context.applicationContext,
             OpenTrackDatabase::class.java,
         ).build()
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE trackers ADD COLUMN calendarShowDayNumber INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE trackers ADD COLUMN calendarShowCount INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE trackers ADD COLUMN calendarShowWeekdayHeader INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE trackers ADD COLUMN calendarWeekStart TEXT NOT NULL DEFAULT 'APP_DEFAULT'")
+                db.execSQL("ALTER TABLE trackers ADD COLUMN calendarSpan TEXT NOT NULL DEFAULT 'TWO_WEEKS'")
+                db.execSQL("ALTER TABLE trackers ADD COLUMN calendarRange TEXT NOT NULL DEFAULT 'SIX_WEEKS'")
+                db.execSQL("ALTER TABLE trackers ADD COLUMN calendarShowEmptyDays INTEGER NOT NULL DEFAULT 1")
+            }
+        }
     }
 }

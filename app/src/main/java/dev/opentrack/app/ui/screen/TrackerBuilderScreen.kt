@@ -57,6 +57,9 @@ import dev.opentrack.app.ui.component.SignalTopBar
 import dev.opentrack.app.ui.component.TrackerGlyph
 import dev.opentrack.app.ui.model.BuilderFieldUi
 import dev.opentrack.app.ui.model.BuilderFieldKindUi
+import dev.opentrack.app.ui.model.CalendarSpanUi
+import dev.opentrack.app.ui.model.CalendarRangeUi
+import dev.opentrack.app.ui.model.CalendarWeekStartUi
 import dev.opentrack.app.ui.model.BuilderOptionUi
 import dev.opentrack.app.ui.model.BuilderPayloadKindUi
 import dev.opentrack.app.ui.model.QuickLogModeUi
@@ -65,6 +68,7 @@ import dev.opentrack.app.ui.model.TrackerBuilderAction
 import dev.opentrack.app.ui.model.TrackerBuilderUiState
 import dev.opentrack.app.ui.model.TrackerGlyphUi
 import dev.opentrack.app.ui.model.TrackerKindUi
+import dev.opentrack.app.ui.theme.SignalPalette
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -343,7 +347,81 @@ private fun androidx.compose.foundation.lazy.LazyListScope.dataItems(
                 singleLine = true,
             )
         }
-        TrackerKindUi.MOMENT -> item { InformationalCard("Nothing else needed", "One tap records that the moment happened.") }
+        TrackerKindUi.MOMENT -> {
+            item {
+                SectionHeader("Calendar content")
+                Text(
+                    "Choose what each timestamp calendar shows. Counts combine multiple recordings on the same day.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+                )
+                CalendarToggle("Day number", "Show 1, 2, 3… inside each day", state.calendarShowDayNumber) {
+                    onAction(TrackerBuilderAction.CalendarShowDayNumberChanged(it))
+                }
+                CalendarToggle("Amount tracked", "Show how many timestamps were recorded", state.calendarShowCount) {
+                    onAction(TrackerBuilderAction.CalendarShowCountChanged(it))
+                }
+                CalendarToggle("Weekday header", "Label columns with the day of the week", state.calendarShowWeekdayHeader) {
+                    onAction(TrackerBuilderAction.CalendarShowWeekdayHeaderChanged(it))
+                }
+                CalendarToggle("Empty days", "Keep untracked days visible for context", state.calendarShowEmptyDays) {
+                    onAction(TrackerBuilderAction.CalendarShowEmptyDaysChanged(it))
+                }
+            }
+            item {
+                Text("First day of the week", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    CalendarWeekStartUi.entries.forEach { value ->
+                        FilterChip(
+                            selected = state.calendarWeekStart == value,
+                            onClick = { onAction(TrackerBuilderAction.CalendarWeekStartChanged(value)) },
+                            label = { Text(value.label) },
+                        )
+                    }
+                }
+            }
+            item {
+                Text("Calendar range", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "Use four weeks for a compact month block or add two weeks for month boundaries.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    CalendarRangeUi.entries.forEach { value ->
+                        FilterChip(
+                            selected = state.calendarRange == value,
+                            onClick = { onAction(TrackerBuilderAction.CalendarRangeChanged(value)) },
+                            label = { Text(value.label) },
+                        )
+                    }
+                }
+            }
+            item {
+                Text("Calendar width", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(
+                    "Two weeks uses 14 columns so wide cards fill the available space.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CalendarSpanUi.entries.forEach { value ->
+                        FilterChip(
+                            selected = state.calendarSpan == value,
+                            onClick = { onAction(TrackerBuilderAction.CalendarSpanChanged(value)) },
+                            label = { Text(value.label) },
+                        )
+                    }
+                }
+            }
+        }
         TrackerKindUi.BOOLEAN -> item { InformationalCard("Simple by design", "Each entry records Yes or No. You can choose a one-tap default next.") }
         null -> item { InformationalCard("Choose a type first", "Go back and select what each entry should record.") }
     }
@@ -425,6 +503,35 @@ private fun androidx.compose.foundation.lazy.LazyListScope.presentationItems(
         }
     }
     item {
+        SectionHeader("Color")
+        Text(
+            "Use this color for calendar intensity, charts, and tracker highlights.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            listOf(
+                "Moss" to SignalPalette.Moss,
+                "Sky" to SignalPalette.Sky,
+                "Coral" to SignalPalette.Coral,
+                "Lilac" to SignalPalette.Lilac,
+                "Rose" to SignalPalette.Rose,
+                "Sun" to SignalPalette.Sun,
+            ).forEach { (label, color) ->
+                FilterChip(
+                    selected = state.accent == color,
+                    onClick = { onAction(TrackerBuilderAction.AccentSelected(color)) },
+                    label = { Text(label) },
+                    leadingIcon = { TrackerGlyph(state.glyph, color, null, Modifier.size(22.dp)) },
+                )
+            }
+        }
+    }
+    item {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("Add to dashboard", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -438,6 +545,22 @@ private fun androidx.compose.foundation.lazy.LazyListScope.presentationItems(
             "Ready to track",
             "You can add more dashboard views, change the quick action, or edit this tracker at any time.",
         )
+    }
+}
+
+@Composable
+private fun CalendarToggle(
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 

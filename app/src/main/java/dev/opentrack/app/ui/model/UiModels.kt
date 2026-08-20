@@ -26,6 +26,21 @@ enum class TimestampPrecisionUi(val label: String) {
 }
 
 @Immutable
+enum class CalendarWeekStartUi(val label: String) {
+    APP_DEFAULT("App default"), MONDAY("Monday"), SUNDAY("Sunday"),
+}
+
+@Immutable
+enum class CalendarSpanUi(val label: String) {
+    ONE_WEEK("7 days"), TWO_WEEKS("14 days"),
+}
+
+@Immutable
+enum class CalendarRangeUi(val label: String) {
+    FOUR_WEEKS("4 weeks"), SIX_WEEKS("6 weeks"), TWELVE_WEEKS("12 weeks"),
+}
+
+@Immutable
 enum class WidgetSizeUi(val label: String) {
     COMPACT("Compact"), WIDE("Wide"),
 }
@@ -62,8 +77,22 @@ data class DistributionPartUi(
 @Immutable
 data class CalendarDayUi(
     val key: String,
+    val dayNumber: String,
+    val count: Int,
+    val isToday: Boolean,
+    val visible: Boolean,
     val intensity: Float,
     val contentDescription: String,
+)
+
+@Immutable
+data class CalendarGridUi(
+    val days: List<CalendarDayUi>,
+    val weekdayLabels: List<String>,
+    val columns: Int,
+    val showDayNumber: Boolean,
+    val showCount: Boolean,
+    val showWeekdayHeader: Boolean,
 )
 
 @Immutable
@@ -81,7 +110,7 @@ sealed interface WidgetChartUi {
     data class Distribution(val parts: List<DistributionPartUi>, val summary: String) : WidgetChartUi
 
     @Immutable
-    data class Calendar(val days: List<CalendarDayUi>, val summary: String) : WidgetChartUi
+    data class Calendar(val grid: CalendarGridUi, val summary: String) : WidgetChartUi
 }
 
 @Immutable
@@ -210,7 +239,7 @@ sealed interface DetailChartUi {
     data class Calendar(
         override val title: String,
         override val summary: String,
-        val days: List<CalendarDayUi>,
+        val grid: CalendarGridUi,
     ) : DetailChartUi
 }
 
@@ -308,6 +337,13 @@ data class TrackerBuilderUiState(
     val glyph: TrackerGlyphUi = TrackerGlyphUi.PULSE,
     val accent: Color,
     val precision: TimestampPrecisionUi = TimestampPrecisionUi.DATE_AND_TIME,
+    val calendarShowDayNumber: Boolean = true,
+    val calendarShowCount: Boolean = true,
+    val calendarShowWeekdayHeader: Boolean = true,
+    val calendarWeekStart: CalendarWeekStartUi = CalendarWeekStartUi.APP_DEFAULT,
+    val calendarSpan: CalendarSpanUi = CalendarSpanUi.TWO_WEEKS,
+    val calendarRange: CalendarRangeUi = CalendarRangeUi.SIX_WEEKS,
+    val calendarShowEmptyDays: Boolean = true,
     val unit: String = "",
     val options: List<BuilderOptionUi> = emptyList(),
     val fields: List<BuilderFieldUi> = emptyList(),
@@ -329,6 +365,14 @@ sealed interface TrackerBuilderAction {
     data class NameChanged(val value: String) : TrackerBuilderAction
     data class KindSelected(val kind: TrackerKindUi) : TrackerBuilderAction
     data class PrecisionSelected(val precision: TimestampPrecisionUi) : TrackerBuilderAction
+    data class AccentSelected(val accent: Color) : TrackerBuilderAction
+    data class CalendarShowDayNumberChanged(val value: Boolean) : TrackerBuilderAction
+    data class CalendarShowCountChanged(val value: Boolean) : TrackerBuilderAction
+    data class CalendarShowWeekdayHeaderChanged(val value: Boolean) : TrackerBuilderAction
+    data class CalendarWeekStartChanged(val value: CalendarWeekStartUi) : TrackerBuilderAction
+    data class CalendarSpanChanged(val value: CalendarSpanUi) : TrackerBuilderAction
+    data class CalendarRangeChanged(val value: CalendarRangeUi) : TrackerBuilderAction
+    data class CalendarShowEmptyDaysChanged(val value: Boolean) : TrackerBuilderAction
     data class UnitChanged(val value: String) : TrackerBuilderAction
     data class QuickModeSelected(val mode: QuickLogModeUi) : TrackerBuilderAction
     data class QuickPresetChanged(val value: String) : TrackerBuilderAction

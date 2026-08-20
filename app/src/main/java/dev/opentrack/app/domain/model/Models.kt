@@ -117,6 +117,20 @@ data class QuickAddConfig(
     val defaultPresetId: String? = null,
 )
 
+enum class CalendarWeekStart { APP_DEFAULT, MONDAY, SUNDAY }
+enum class CalendarSpan { ONE_WEEK, TWO_WEEKS }
+enum class CalendarRange { FOUR_WEEKS, SIX_WEEKS, TWELVE_WEEKS }
+
+data class TimestampCalendarConfig(
+    val showDayNumber: Boolean = true,
+    val showCount: Boolean = true,
+    val showWeekdayHeader: Boolean = true,
+    val weekStart: CalendarWeekStart = CalendarWeekStart.APP_DEFAULT,
+    val span: CalendarSpan = CalendarSpan.TWO_WEEKS,
+    val range: CalendarRange = CalendarRange.SIX_WEEKS,
+    val showEmptyDays: Boolean = true,
+)
+
 data class TrackerDefinition(
     val id: String = newId(),
     val name: String,
@@ -125,6 +139,7 @@ data class TrackerDefinition(
     val timestampPrecision: TimestampPrecision = TimestampPrecision.DATE_TIME,
     val iconKey: String? = null,
     val colorArgb: Long? = null,
+    val timestampCalendar: TimestampCalendarConfig = TimestampCalendarConfig(),
     val order: Int = 0,
     val fields: List<TrackerField> = emptyList(),
     val presets: List<QuickPreset> = emptyList(),
