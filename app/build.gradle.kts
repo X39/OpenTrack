@@ -4,6 +4,17 @@ plugins {
     id("com.google.devtools.ksp")
 }
 
+// Room 2.8.4 generates serializers against 1.8.1, while SavedState currently
+// contributes a strict 1.7.3 constraint. Keep the runtime aligned with Room;
+// otherwise migration tests fail on device with AbstractMethodError.
+configurations.configureEach {
+    resolutionStrategy.force(
+        "org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1",
+        "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1",
+        "org.jetbrains.kotlinx:kotlinx-serialization-protobuf:1.8.1",
+    )
+}
+
 val releaseKeystorePath = providers.environmentVariable("OPENTRACK_KEYSTORE_FILE").orNull
 val releaseKeystorePassword = providers.environmentVariable("OPENTRACK_KEYSTORE_PASSWORD").orNull
 val releaseKeyAlias = providers.environmentVariable("OPENTRACK_KEY_ALIAS").orNull
